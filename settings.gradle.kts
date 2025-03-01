@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "CodeCanvas"
+rootProject.name = "BookmarkCanvas"
