@@ -33,6 +33,9 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
 
         val actionToolbar = ActionManager.getInstance()
             .createActionToolbar("BookmarkCanvasToolbar", actionGroup, true)
+        
+        // Set the target component to fix the warning
+        actionToolbar.setTargetComponent(canvasPanel)
 
         // Set the toolbar and content
         toolbar = actionToolbar.component

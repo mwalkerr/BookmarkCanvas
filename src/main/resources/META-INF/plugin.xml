@@ -5,7 +5,7 @@
     <description><![CDATA[
         Canvas-based code exploration tool showing bookmarks as draggable nodes.
     ]]></description>
-    <idea-version since-build="222" until-build="242.*" />
+    <idea-version since-build="232" until-build="242.*" />
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
 
@@ -15,7 +15,8 @@
                     icon="/icons/canvas_icon.svg"
                     anchor="right"
                     factoryClass="org.mwalker.bookmarkcanvas.ui.CanvasToolWindow"/>
-        <applicationService serviceImplementation="org.mwalker.bookmarkcanvas.services.CanvasPersistenceService"/>
+        <applicationService 
+            serviceImplementation="org.mwalker.bookmarkcanvas.services.CanvasPersistenceService"/>
     </extensions>
 
     <actions>

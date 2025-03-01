@@ -1,8 +1,8 @@
 package org.mwalker.bookmarkcanvas.services
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.PersistentStateComponent
-import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.BaseState
+import com.intellij.openapi.components.SimplePersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
@@ -10,33 +10,33 @@ import com.intellij.openapi.project.Project
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
-
-private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
+import com.intellij.util.xmlb.annotations.Transient
+import java.util.*
 
 /**
- * A state class specifically designed for XML serialization.
+ * A state class specifically designed for serialization.
  * This is used as an intermediate format for the complex CanvasState.
  */
-class PersistentCanvasState {
-    var projectId: String = ""
-    var nodeMap: MutableMap<String, SerializableNode> = mutableMapOf()
-    var connections: MutableList<SerializableConnection> = mutableListOf()
+class PersistentCanvasState : BaseState() {
+    var projectId by string("")
+    var nodeMap by map<String, SerializableNode>()
+    var connections by list<SerializableConnection>()
 }
 
 /**
  * Serializable version of BookmarkNode
  */
-class SerializableNode {
-    var id: String = ""
-    var bookmarkId: String = ""
-    var displayName: String = ""
-    var filePath: String = ""
-    var lineNumber: Int = 0
-    var positionX: Int = 100
-    var positionY: Int = 100
-    var showCodeSnippet: Boolean = false
-    var contextLinesBefore: Int = 3
-    var contextLinesAfter: Int = 3
+class SerializableNode : BaseState() {
+    var id by string("")
+    var bookmarkId by string("")
+    var displayName by string("")
+    var filePath by string("")
+    var lineNumber by property(0)
+    var positionX by property(100)
+    var positionY by property(100)
+    var showCodeSnippet by property(false)
+    var contextLinesBefore by property(3)
+    var contextLinesAfter by property(3)
     
     companion object {
         fun fromBookmarkNode(node: BookmarkNode): SerializableNode {
@@ -56,10 +56,10 @@ class SerializableNode {
         
         fun toBookmarkNode(serialNode: SerializableNode): BookmarkNode {
             return BookmarkNode(
-                id = serialNode.id,
-                bookmarkId = serialNode.bookmarkId,
-                displayName = serialNode.displayName,
-                filePath = serialNode.filePath,
+                id = serialNode.id ?: "",
+                bookmarkId = serialNode.bookmarkId ?: "",
+                displayName = serialNode.displayName ?: "",
+                filePath = serialNode.filePath ?: "",
                 lineNumber = serialNode.lineNumber,
                 positionX = serialNode.positionX,
                 positionY = serialNode.positionY,
@@ -74,12 +74,12 @@ class SerializableNode {
 /**
  * Serializable version of NodeConnection
  */
-class SerializableConnection {
-    var id: String = ""
-    var sourceNodeId: String = ""
-    var targetNodeId: String = ""
-    var label: String = ""
-    var colorRGB: Int = 0
+class SerializableConnection : BaseState() {
+    var id by string("")
+    var sourceNodeId by string("")
+    var targetNodeId by string("")
+    var label by string("")
+    var colorRGB by property(0)
     
     companion object {
         fun fromNodeConnection(connection: NodeConnection): SerializableConnection {
@@ -94,34 +94,45 @@ class SerializableConnection {
         
         fun toNodeConnection(serialConn: SerializableConnection): NodeConnection {
             return NodeConnection(
-                id = serialConn.id,
-                sourceNodeId = serialConn.sourceNodeId,
-                targetNodeId = serialConn.targetNodeId,
-                label = serialConn.label,
+                id = serialConn.id ?: "",
+                sourceNodeId = serialConn.sourceNodeId ?: "",
+                targetNodeId = serialConn.targetNodeId ?: "",
+                label = serialConn.label ?: "",
                 colorRGB = serialConn.colorRGB
             )
         }
     }
 }
 
-@Service
+/**
+ * Main state holder for the PersistentStateComponent
+ */
+class BookmarkCanvasState : BaseState() {
+    var projectStates by map<String, PersistentCanvasState>()
+}
+
 @State(
     name = "BookmarkCanvasPersistence",
     storages = [Storage("bookmarkCanvas.xml")]
 )
-class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, PersistentCanvasState>> {
+class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasState>(BookmarkCanvasState()) {
     private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
     
-    // In-memory storage for canvas states
+    // In-memory storage for runtime canvas states
+    @Transient
     private val projectCanvasMap = mutableMapOf<String, CanvasState>()
-    // Storage for serialized state
-    private var serializedState = mutableMapOf<String, PersistentCanvasState>()
     
     companion object {
+        private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
+        
         fun getInstance(): CanvasPersistenceService {
             LOG.info("Getting CanvasPersistenceService instance")
             return ApplicationManager.getApplication().getService(CanvasPersistenceService::class.java)
         }
+    }
+    
+    init {
+        LOG.info("CanvasPersistenceService initialized with state size: ${state.projectStates.size}")
     }
 
     fun getCanvasState(project: Project): CanvasState {
@@ -131,14 +142,17 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
         
         // If we already have it in memory, return it
         if (projectCanvasMap.containsKey(projectId)) {
+            LOG.info("Returning existing in-memory state for project $projectId")
             return projectCanvasMap[projectId]!!
         }
         
         // Try to get from serialized state
-        val persistentState = serializedState[projectId]
+        val persistentState = state.projectStates[projectId]
         
         if (persistentState != null) {
             try {
+                LOG.info("Deserializing saved state for project $projectId with ${persistentState.nodeMap.size} nodes")
+                
                 // Convert from serializable format to runtime format
                 val canvasState = CanvasState()
                 
@@ -157,8 +171,10 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
                 projectCanvasMap[projectId] = canvasState
                 return canvasState
             } catch (e: Exception) {
-                LOG.error("Failed to deserialize canvas state: ${e.message}")
+                LOG.error("Failed to deserialize canvas state: ${e.message}", e)
             }
+        } else {
+            LOG.info("No saved state found for project $projectId")
         }
         
         // If all else fails, return a new empty state
@@ -168,7 +184,7 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
     }
 
     fun saveCanvasState(project: Project, canvasState: CanvasState) {
-        LOG.info("Saving canvas state for project: ${project.name}")
+        LOG.info("Saving canvas state for project: ${project.name} with ${canvasState.nodes.size} nodes")
         val projectId = project.locationHash
         projectCanvasMap[projectId] = canvasState
         
@@ -189,36 +205,9 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
         }
         
         // Update serialized state
-        serializedState[projectId] = persistentState
-    }
-
-    override fun getState(): MutableMap<String, PersistentCanvasState> {
-        LOG.info("Getting serialized state")
-        // Make sure any pending changes are serialized
-        for ((projectId, canvasState) in projectCanvasMap) {
-            val persistentState = PersistentCanvasState()
-            persistentState.projectId = projectId
-            
-            for (node in canvasState.nodes.values) {
-                val serialNode = SerializableNode.fromBookmarkNode(node)
-                persistentState.nodeMap[node.id] = serialNode
-            }
-            
-            for (connection in canvasState.connections) {
-                val serialConn = SerializableConnection.fromNodeConnection(connection)
-                persistentState.connections.add(serialConn)
-            }
-            
-            serializedState[projectId] = persistentState
-        }
+        state.projectStates[projectId] = persistentState
         
-        return serializedState
-    }
-
-    override fun loadState(state: MutableMap<String, PersistentCanvasState>) {
-        LOG.info("Loading serialized state")
-        serializedState = state
-        // Clear in-memory map to force reload from serialized state on next access
-        projectCanvasMap.clear()
+        // Make sure we commit changes to storage
+        LOG.info("State updated, project count: ${state.projectStates.size}")
     }
 }
