@@ -21,6 +21,7 @@ class CanvasPanel(val project: Project) : JPanel() {
     private var tempConnectionEndPoint: Point? = null
     private var zoomFactor = 1.0
     private var snapToGrid = false
+    private var showGrid = false
     private val GRID_SIZE = 20
     
     companion object {
@@ -55,16 +56,31 @@ class CanvasPanel(val project: Project) : JPanel() {
         val nodeComponent = org.mwalker.bookmarkcanvas.ui.NodeComponent(node, project)
         add(nodeComponent)
 
-        // Apply zoom
+        // Stagger new nodes to prevent overlap
+        if (node.position.x == 100 && node.position.y == 100) {
+            // Find a free position
+            val offset = nodeComponents.size * 30
+            node.position = Point(100 + offset, 100 + offset)
+        }
+        
+        // Apply zoom and snap if necessary
         val pos = node.position
-        val scaledX = (pos.x * zoomFactor).toInt()
-        val scaledY = (pos.y * zoomFactor).toInt()
+        var x = (pos.x * zoomFactor).toInt()
+        var y = (pos.y * zoomFactor).toInt()
+        
+        // Apply snapping if enabled
+        if (snapToGrid) {
+            val gridSize = (GRID_SIZE * zoomFactor).toInt()
+            x = (x / gridSize) * gridSize
+            y = (y / gridSize) * gridSize
+            node.position = Point(x / zoomFactor.toInt(), y / zoomFactor.toInt())
+        }
 
         val prefSize = nodeComponent.preferredSize
         val scaledWidth = (prefSize.width * zoomFactor).toInt()
         val scaledHeight = (prefSize.height * zoomFactor).toInt()
 
-        nodeComponent.setBounds(scaledX, scaledY, scaledWidth, scaledHeight)
+        nodeComponent.setBounds(x, y, scaledWidth, scaledHeight)
         nodeComponents[node.id] = nodeComponent
     }
 
@@ -160,6 +176,7 @@ class CanvasPanel(val project: Project) : JPanel() {
 
     fun setSnapToGrid(value: Boolean) {
         snapToGrid = value
+        showGrid = value // Show grid when snap is enabled
         if (snapToGrid) {
             // Snap all existing nodes to grid
             for (nodeComp in nodeComponents.values) {
@@ -169,8 +186,13 @@ class CanvasPanel(val project: Project) : JPanel() {
                 nodeComp.setLocation(x, y)
                 nodeComp.node.position = Point(x, y)
             }
-            repaint()
         }
+        repaint()
+    }
+    
+    fun setShowGrid(value: Boolean) {
+        showGrid = value
+        repaint()
     }
 
     private fun updateCanvasSize() {
@@ -205,7 +227,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
         // Draw grid if enabled
-        if (snapToGrid) {
+        if (showGrid) {
             g2d.color = GRID_COLOR
             val scaledGridSize = (GRID_SIZE * zoomFactor).toInt()
 

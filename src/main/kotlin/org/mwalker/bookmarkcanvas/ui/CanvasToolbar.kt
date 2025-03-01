@@ -26,6 +26,7 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         actionGroup.add(org.mwalker.bookmarkcanvas.actions.RefreshBookmarksAction(project, canvasPanel))
         actionGroup.add(ClearCanvasAction(project, canvasPanel))
         actionGroup.add(ToggleSnapToGridAction(canvasPanel))
+        actionGroup.add(ToggleShowGridAction(canvasPanel))
         actionGroup.add(ExportCanvasAction(project, canvasPanel))
         actionGroup.add(org.mwalker.bookmarkcanvas.actions.ZoomInAction(canvasPanel))
         actionGroup.add(ZoomOutAction(canvasPanel))

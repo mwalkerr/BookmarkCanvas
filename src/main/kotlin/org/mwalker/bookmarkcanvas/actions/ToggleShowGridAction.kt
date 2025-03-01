@@ -7,20 +7,20 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Toggleable
 import org.jetbrains.annotations.NotNull
 
-class ToggleSnapToGridAction(
+class ToggleShowGridAction(
     private val canvasPanel: CanvasPanel
-) : AnAction("Snap to Grid", "Align nodes to a grid", AllIcons.Graph.SnapToGrid), Toggleable {
+) : AnAction("Show Grid", "Show or hide the grid", AllIcons.Graph.Grid), Toggleable {
 
-    private var snapToGrid = false
+    private var showGrid = false
 
     override fun actionPerformed(@NotNull e: AnActionEvent) {
-        snapToGrid = !snapToGrid
-        canvasPanel.setSnapToGrid(snapToGrid)
-        Toggleable.setSelected(e.presentation, snapToGrid)
+        showGrid = !showGrid
+        canvasPanel.setShowGrid(showGrid)
+        Toggleable.setSelected(e.presentation, showGrid)
     }
 
     override fun update(@NotNull e: AnActionEvent) {
         super.update(e)
-        Toggleable.setSelected(e.presentation, snapToGrid)
+        Toggleable.setSelected(e.presentation, showGrid)
     }
 }

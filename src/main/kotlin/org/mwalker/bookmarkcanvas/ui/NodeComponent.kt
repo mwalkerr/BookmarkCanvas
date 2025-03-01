@@ -19,6 +19,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
     private var codeArea: JBTextArea? = null
     private var dragStart: Point? = null
     private var isDragging = false
+    private var isResizing = false
 
     companion object {
         private val NODE_BACKGROUND = JBColor(
@@ -29,8 +30,13 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             Color(0, 0, 0), // Light mode
             Color(187, 187, 187), // Dark mode
         )
+        private val RESIZE_HANDLE_COLOR = JBColor(
+            Color(180, 180, 180), // Light mode
+            Color(100, 100, 100), // Dark mode
+        )
         private val TITLE_PADDING = 8
         private val CONTENT_PADDING = 10
+        private val RESIZE_HANDLE_SIZE = 10
     }
 
     init {
@@ -100,24 +106,74 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         // Ensure clicks on the text area propagate to the parent for dragging
         newCodeArea.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                e.source = this@NodeComponent
-                this@NodeComponent.dispatchEvent(e)
+                // Forward to parent component
+                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume() // Prevent normal processing
             }
             
             override fun mouseReleased(e: MouseEvent) {
-                e.source = this@NodeComponent
-                this@NodeComponent.dispatchEvent(e)
+                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
             }
             
             override fun mouseClicked(e: MouseEvent) {
-                e.source = this@NodeComponent
-                this@NodeComponent.dispatchEvent(e)
+                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
             }
         })
-
+        
+        // Also handle mouse drags
+        newCodeArea.addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseDragged(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+            
+            override fun mouseMoved(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+        })
+        
+        // Create scroll pane
         val scrollPane = JBScrollPane(newCodeArea)
         scrollPane.preferredSize = Dimension(200, 150)
         scrollPane.border = LineBorder(JBColor.border(), 1)
+        
+        // Also apply the same event forwarding to the scroll pane
+        scrollPane.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+            
+            override fun mouseReleased(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+            
+            override fun mouseClicked(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+        })
+        
+        scrollPane.addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseDragged(e: MouseEvent) {
+                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
+                this@NodeComponent.dispatchEvent(parentEvent)
+                e.consume()
+            }
+        })
+        
         add(scrollPane, BorderLayout.CENTER)
     }
 
@@ -223,8 +279,13 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         val adapter = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
+                    val resizeArea = isInResizeArea(e.point)
+                    if (resizeArea) {
+                        isResizing = true
+                    } else {
+                        isDragging = true
+                    }
                     dragStart = e.point
-                    isDragging = true
                 } else if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger) {
                     // Start connection from this node (works for right-click and Mac touchpad double-tap)
                     val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
@@ -233,14 +294,18 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                isDragging = false
-                // Save node position when dropped
-                val location = location
-                node.position = location
-                val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
-                canvas?.let {
-                    CanvasPersistenceService.getInstance().saveCanvasState(project, it.canvasState)
+                if (isDragging || isResizing) {
+                    // Save position and size when released
+                    val location = location
+                    node.position = location
+                    
+                    val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
+                    canvas?.let {
+                        CanvasPersistenceService.getInstance().saveCanvasState(project, it.canvasState)
+                    }
                 }
+                isDragging = false
+                isResizing = false
             }
 
             override fun mouseDragged(e: MouseEvent) {
@@ -257,6 +322,25 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
 
                     // Repaint parent to update connections
                     parent?.repaint()
+                } else if (isResizing) {
+                    val current = e.point
+                    val widthDelta = current.x - dragStart!!.x
+                    val heightDelta = current.y - dragStart!!.y
+                    
+                    // Calculate new size
+                    val newWidth = (width + widthDelta).coerceAtLeast(120)
+                    val newHeight = (height + heightDelta).coerceAtLeast(40)
+                    
+                    // Update size
+                    setSize(newWidth, newHeight)
+                    preferredSize = Dimension(newWidth, newHeight)
+                    
+                    // Update drag start point
+                    dragStart = current
+                    
+                    revalidate()
+                    repaint()
+                    parent?.repaint()  // Update connections
                 }
             }
             
@@ -266,10 +350,50 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                     node.navigateToBookmark(project)
                 }
             }
+            
+            override fun mouseMoved(e: MouseEvent) {
+                // Change cursor when over resize area
+                if (isInResizeArea(e.point)) {
+                    cursor = Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR)
+                } else {
+                    cursor = Cursor.getDefaultCursor()
+                }
+            }
         }
 
         addMouseListener(adapter)
         addMouseMotionListener(adapter)
+    }
+    
+    private fun isInResizeArea(point: Point): Boolean {
+        val resizeArea = Rectangle(
+            width - RESIZE_HANDLE_SIZE, 
+            height - RESIZE_HANDLE_SIZE,
+            RESIZE_HANDLE_SIZE,
+            RESIZE_HANDLE_SIZE
+        )
+        return resizeArea.contains(point)
+    }
+    
+    override fun paintComponent(g: Graphics) {
+        super.paintComponent(g)
+        
+        // Draw resize handle in bottom-right corner
+        val g2d = g.create() as Graphics2D
+        g2d.color = RESIZE_HANDLE_COLOR
+        
+        // Draw diagonal lines for resize handle
+        val x = width - RESIZE_HANDLE_SIZE
+        val y = height - RESIZE_HANDLE_SIZE
+        for (i in 1..3) {
+            val offset = i * 3
+            g2d.drawLine(
+                x + offset, y + RESIZE_HANDLE_SIZE,
+                x + RESIZE_HANDLE_SIZE, y + offset
+            )
+        }
+        
+        g2d.dispose()
     }
 
     private fun setupKeyboardNavigation() {
