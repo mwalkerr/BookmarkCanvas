@@ -16,11 +16,21 @@ data class BookmarkNode(
     var displayName: String,
     var filePath: String,
     var lineNumber: Int,
-    var position: Point = Point(100, 100), // Default position
+    var positionX: Int = 100, // Default X position
+    var positionY: Int = 100, // Default Y position
     var showCodeSnippet: Boolean = false,
     var contextLinesBefore: Int = 3,
     var contextLinesAfter: Int = 3
 ) {
+    
+    // Provide position as a computed property
+    var position: Point
+        get() = Point(positionX, positionY)
+        set(value) {
+            positionX = value.x
+            positionY = value.y
+        }
+    
     constructor(bookmarkId: String, displayName: String, filePath: String, lineNumber: Int) : this(
         id = UUID.randomUUID().toString(),
         bookmarkId = bookmarkId,

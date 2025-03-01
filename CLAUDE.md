@@ -1,5 +1,9 @@
 # BookmarkCanvas Development Guide
 
+## Operation Notes
+- If there is any uncertainty or ambiguity in the requirements, ask for clarification
+
+
 ## Build & Run Commands
 - Build plugin: `./gradlew build`
 - Run in IDE: `./gradlew runIde`
@@ -11,7 +15,7 @@
 ## Code Style Guidelines
 - **Language**: Kotlin 1.9.25 with JVM target 17
 - **Naming**: Use camelCase for methods/variables, PascalCase for classes
-- **Formatting**: 4-space indentation, max line length 120 characters
+- **Formatting**: 4-space indentation, max line length 120 characters, always trailing commas
 - **Imports**: Organize imports, no wildcards, alphabetical order
 - **Classes**: Prefer data classes for models, single responsibility pattern
 - **Nullability**: Use nullable types (Type?) explicitly, avoid !! operator

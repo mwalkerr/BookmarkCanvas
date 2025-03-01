@@ -8,8 +8,16 @@ data class NodeConnection(
     val sourceNodeId: String,
     val targetNodeId: String,
     var label: String = "",
-    var color: Color = Color.GRAY
+    var colorRGB: Int = Color.GRAY.rgb
 ) {
+    
+    // Color as a computed property
+    var color: Color
+        get() = Color(colorRGB)
+        set(value) {
+            colorRGB = value.rgb
+        }
+    
     constructor(sourceNodeId: String, targetNodeId: String) : this(
         id = UUID.randomUUID().toString(),
         sourceNodeId = sourceNodeId,

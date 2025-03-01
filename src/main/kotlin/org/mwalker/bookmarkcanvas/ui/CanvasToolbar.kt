@@ -19,7 +19,7 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         scrollPane.horizontalScrollBar.unitIncrement = 16
 
         // Allow the canvas to be larger than the visible area
-        canvasPanel.preferredSize = Dimension(2000, 2000)
+        canvasPanel.preferredSize = Dimension(5000, 5000)
 
         // Create toolbar actions
         val actionGroup = DefaultActionGroup("CANVAS_TOOLBAR", false)
