@@ -10,6 +10,8 @@ import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
 
+private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
+
 /**
  * A state class specifically designed for XML serialization.
  * This is used as an intermediate format for the complex CanvasState.
@@ -115,11 +117,14 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
     
     companion object {
         fun getInstance(): CanvasPersistenceService {
+            LOG.info("Getting CanvasPersistenceService instance")
             return ApplicationManager.getApplication().getService(CanvasPersistenceService::class.java)
         }
     }
 
     fun getCanvasState(project: Project): CanvasState {
+        LOG.info("Getting canvas state for project: ${project.name}")
+
         val projectId = project.locationHash
         
         // If we already have it in memory, return it
@@ -161,6 +166,7 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
     }
 
     fun saveCanvasState(project: Project, canvasState: CanvasState) {
+        LOG.info("Saving canvas state for project: ${project.name}")
         val projectId = project.locationHash
         projectCanvasMap[projectId] = canvasState
         
@@ -185,6 +191,7 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
     }
 
     override fun getState(): MutableMap<String, PersistentCanvasState> {
+        LOG.info("Getting serialized state")
         // Make sure any pending changes are serialized
         for ((projectId, canvasState) in projectCanvasMap) {
             val persistentState = PersistentCanvasState()
@@ -207,6 +214,7 @@ class CanvasPersistenceService : PersistentStateComponent<MutableMap<String, Per
     }
 
     override fun loadState(state: MutableMap<String, PersistentCanvasState>) {
+        LOG.info("Loading serialized state")
         serializedState = state
         // Clear in-memory map to force reload from serialized state on next access
         projectCanvasMap.clear()

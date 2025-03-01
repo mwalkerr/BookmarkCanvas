@@ -1,7 +1,9 @@
 package org.mwalker.bookmarkcanvas.ui
 
+
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -13,6 +15,7 @@ import javax.swing.*
 import javax.swing.border.CompoundBorder
 import javax.swing.border.EmptyBorder
 import javax.swing.border.LineBorder
+import kotlin.math.abs
 
 class NodeComponent(val node: BookmarkNode, private val project: Project) : JPanel() {
     private val titleLabel: JBLabel
@@ -20,6 +23,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
     private var dragStart: Point? = null
     private var isDragging = false
     private var isResizing = false
+    private var menu: JPopupMenu? = null
     var isSelected = false
         set(value) {
             if (field != value) {
@@ -31,6 +35,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
     private var connectionStarted = false
 
     companion object {
+        private val LOG = Logger.getInstance(NodeComponent::class.java)
         private val NODE_BACKGROUND = JBColor(
             Color(250, 250, 250), // Light mode
             Color(43, 43, 43), // Dark mode
@@ -122,29 +127,14 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
 
         // Ensure clicks on the text area propagate to the parent for dragging
         newCodeArea.addMouseListener(object : MouseAdapter() {
-            private fun forwardEvent(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
-
-            override fun mousePressed(e: MouseEvent) = forwardEvent(e)
-            override fun mouseReleased(e: MouseEvent) = forwardEvent(e)
-            override fun mouseClicked(e: MouseEvent) = forwardEvent(e)
+            override fun mousePressed(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, this@NodeComponent)
+            override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, this@NodeComponent)
+            override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, this@NodeComponent)
         })
         // Also handle mouse drags
         newCodeArea.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
-            
-            override fun mouseMoved(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(newCodeArea, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
+            override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, this@NodeComponent)
+            override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, this@NodeComponent)
         })
         
         // Create scroll pane
@@ -154,31 +144,14 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         
         // Also apply the same event forwarding to the scroll pane
         scrollPane.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
-            
-            override fun mouseReleased(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
-            
-            override fun mouseClicked(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
+            override fun mousePressed(e: MouseEvent) = forwardMouseEvent(scrollPane, e, this@NodeComponent)
+            override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(scrollPane, e, this@NodeComponent)
+            override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(scrollPane, e, this@NodeComponent)
         })
         
         scrollPane.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(e: MouseEvent) {
-                val parentEvent = SwingUtilities.convertMouseEvent(scrollPane, e, this@NodeComponent)
-                this@NodeComponent.dispatchEvent(parentEvent)
-                e.consume()
-            }
+            override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(scrollPane, e, this@NodeComponent)
+            override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(scrollPane, e, this@NodeComponent)
         })
         
         add(scrollPane, BorderLayout.CENTER)
@@ -288,15 +261,18 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             canvas?.connectionStartNode = this
         }
         menu.add(createConnectionItem)
-
-        componentPopupMenu = menu
+        this.menu = menu
+        
+        // Don't set componentPopupMenu as we're handling it manually to support multi-selection
     }
 
     private fun setupDragBehavior() {
         val adapter = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
+                LOG.info("Mouse pressed on node: ${node.displayName}, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
+                "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
                 // This will get the parent CanvasPanel
-                val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
+                val canvas = parent as org.mwalker.bookmarkcanvas.ui.CanvasPanel
                 
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     val resizeArea = isInResizeArea(e.point)
@@ -304,23 +280,32 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                         isResizing = true
                         dragStart = e.point
                         e.consume() // Consume the event so it doesn't propagate
-                    } else if (canvas?.selectedNodes?.contains(this@NodeComponent) == true) {
-                        // If we're part of a selection group, let the canvas handle dragging
-                        // Don't set isDragging here
+                    } else if (canvas.selectedNodes.contains(this@NodeComponent)) {
+                        // If we're part of a selection group, forward the event to the canvas
+                        forwardMouseEvent(this@NodeComponent, e, canvas)
                     } else {
                         // Individual dragging
                         isDragging = true
                         dragStart = e.point
                     }
                 } else if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger) {
-                    // Two-finger tap handling
-                    twoFingerTapStartPoint = e.point
-                    connectionStarted = false
+                    // Check if this node is part of a multi-selection
+                    if (canvas.selectedNodes.contains(this@NodeComponent) && canvas.selectedNodes.size > 1) {
+                        // Forward to canvas for group context menu
+                        forwardMouseEvent(this@NodeComponent, e, canvas)
+                        e.consume()
+                    } else {
+                        // Two-finger tap handling for single node
+                        twoFingerTapStartPoint = e.point
+                        connectionStarted = false
+                    }
                 }
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
+                LOG.info("Mouse released on node: ${node.displayName}, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
+                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
+                val canvas = parent as org.mwalker.bookmarkcanvas.ui.CanvasPanel
                 
                 if (isDragging || isResizing) {
                     // Save position and size when released
@@ -335,10 +320,21 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                     }
                     isDragging = false
                     isResizing = false
+                } else if (canvas.selectedNodes.contains(this@NodeComponent)) {
+                    // If we're part of a selection group, forward the event to the canvas
+                    forwardMouseEvent(this@NodeComponent, e, canvas)
                 } else if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger) {
-                    // Only show context menu on release if we haven't started a connection
-                    if (!connectionStarted) {
-                        componentPopupMenu?.show(this@NodeComponent, e.x, e.y)
+                    // Check if this node is part of a multi-selection
+                    if (canvas.selectedNodes.contains(this@NodeComponent) && canvas.selectedNodes.size > 1) {
+                        // Forward to canvas for group context menu
+                        forwardMouseEvent(this@NodeComponent, e, canvas)
+                    } else if (!connectionStarted) {
+                        // Only show context menu on release if we haven't started a connection
+                        LOG.info("Showing context menu")
+                        this@NodeComponent.menu?.show(this@NodeComponent, e.x, e.y)
+                    } else {
+                        // Forward connection completion event to canvas
+                        forwardMouseEvent(this@NodeComponent, e, canvas)
                     }
                     twoFingerTapStartPoint = null
                     connectionStarted = false
@@ -348,13 +344,15 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             }
 
             override fun mouseDragged(e: MouseEvent) {
-                if (isDragging) {
-                    // Get canvas to check selection
-                    val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
-
-                    // Only handle dragging here if this node is not part of a multi-node selection
-                    if (canvas != null && (!canvas.selectedNodes.contains(this@NodeComponent) ||
-                                          canvas.selectedNodes.size == 1)) {
+                val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
+                
+                // Check if we're part of a multi-selection
+                if (canvas != null && canvas.selectedNodes.contains(this@NodeComponent) && canvas.selectedNodes.size > 1) {
+                    // Forward the event to the canvas for group dragging
+                    forwardMouseEvent(this@NodeComponent, e, canvas)
+                } else if (isDragging) {
+                    // Handle individual dragging
+                    if (canvas != null) {
                         val current = e.point
                         val location = location
 
@@ -397,8 +395,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                 } else if (twoFingerTapStartPoint != null && 
                          (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger)) {
                     // Two-finger drag to create connection
-                    if (Math.abs(e.point.x - twoFingerTapStartPoint!!.x) > 5 || 
-                        Math.abs(e.point.y - twoFingerTapStartPoint!!.y) > 5) {
+                    if (abs(e.point.x - twoFingerTapStartPoint!!.x) > 5 || 
+                        abs(e.point.y - twoFingerTapStartPoint!!.y) > 5) {
                         // We've moved enough to consider this a connection drag
                         connectionStarted = true
                         
@@ -417,6 +415,9 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             }
             
             override fun mouseClicked(e: MouseEvent) {
+                LOG.info("Mouse clicked on node: ${node.displayName}, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
+                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
+
                 if (SwingUtilities.isLeftMouseButton(e) && e.clickCount == 2) {
                     // Navigate to bookmark on double-click
                     node.navigateToBookmark(project)

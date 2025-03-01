@@ -1,5 +1,6 @@
 package org.mwalker.bookmarkcanvas.ui
 
+import com.intellij.openapi.diagnostic.Logger
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
@@ -33,6 +34,8 @@ class CanvasPanel(val project: Project) : JPanel() {
     val GRID_SIZE = 20
     
     companion object {
+        private val LOG = Logger.getInstance(NodeComponent::class.java)
+
         private val CANVAS_BACKGROUND = JBColor(
             Color(240, 240, 240), // Light mode
             Color(30, 30, 30) // Dark mode
@@ -108,6 +111,9 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Mouse listener for creating new connections and canvas interaction
         val mouseAdapter = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
+                LOG.info("Mouse pressed on canvas, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
+                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
+
                 requestFocusInWindow() // Ensure panel can receive key events
                 
                 if (SwingUtilities.isLeftMouseButton(e)) {
@@ -127,21 +133,27 @@ class CanvasPanel(val project: Project) : JPanel() {
                             clearSelection()
                         }
                     } else {
-                        // Clicking on a component that isn't the canvas
-                        val comp = getComponentAt(e.point)
-                        if (comp is org.mwalker.bookmarkcanvas.ui.NodeComponent) {
+                        // Clicking on a component that isn't the canvas directly
+                        // Check if it's from a forwarded event from a node
+                        val targetNode = if (e.source is org.mwalker.bookmarkcanvas.ui.NodeComponent) {
+                            e.source as org.mwalker.bookmarkcanvas.ui.NodeComponent
+                        } else {
+                            getComponentAt(e.point) as? org.mwalker.bookmarkcanvas.ui.NodeComponent
+                        }
+                        
+                        if (targetNode != null) {
                             dragStartPoint = e.point
                             
                             // Update selection based on shift key
-                            if (!e.isShiftDown && !selectedNodes.contains(comp)) {
+                            if (!e.isShiftDown && !selectedNodes.contains(targetNode)) {
                                 clearSelection()
                             }
                             
                             // Add to selection
-                            if (!selectedNodes.contains(comp)) {
-                                selectedNodes.add(comp)
-                                comp.isSelected = true
-                                comp.repaint()
+                            if (!selectedNodes.contains(targetNode)) {
+                                selectedNodes.add(targetNode)
+                                targetNode.isSelected = true
+                                targetNode.repaint()
                             }
                             
                             // This is important - prevent child components from handling this event
@@ -155,6 +167,9 @@ class CanvasPanel(val project: Project) : JPanel() {
             }
 
             override fun mouseReleased(e: MouseEvent) {
+                LOG.info("Mouse released on canvas, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
+                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}, connectionStartNode is null: ${connectionStartNode == null}")
+
                 if (connectionStartNode != null) {
                     // Try to find if there's a node at the release point
                     val comp = getComponentAt(e.point)
@@ -225,7 +240,8 @@ class CanvasPanel(val project: Project) : JPanel() {
                     // Make sure drag was started on a node
                     val comp = getComponentAt(dragStartPoint!!)
                     
-                    if (comp is NodeComponent && selectedNodes.contains(comp)) {
+                    if ((comp is NodeComponent && selectedNodes.contains(comp)) || 
+                        (selectedNodes.isNotEmpty() && e.source is NodeComponent && selectedNodes.contains(e.source))) {
                         // Drag all selected nodes
                         val dx = e.x - dragStartPoint!!.x
                         val dy = e.y - dragStartPoint!!.y
