@@ -14,10 +14,17 @@ import com.intellij.openapi.wm.ToolWindowManager
 import org.jetbrains.annotations.NotNull
 import javax.swing.JComponent
 import javax.swing.JScrollPane
+import com.intellij.openapi.diagnostic.Logger
+
 
 class AddToCanvasAction : AnAction() {
+    companion object {
+        private val LOG = Logger.getInstance(AddToCanvasAction::class.java)
+    }
     override fun actionPerformed(@NotNull e: AnActionEvent) {
+        LOG.info("AddToCanvasAction.actionPerformed called, project: ${e.project}")
         val project = e.project ?: return
+        LOG.info("AddToCanvasAction.actionPerformed called, project: ${e.project}, node: ${BookmarkService.createNodeFromCurrentPosition(e.project!!)}")
 
         // Create a node from the current editor position
         val node = BookmarkService.createNodeFromCurrentPosition(project) ?: return

@@ -59,6 +59,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         private val TITLE_PADDING = 8
         private val CONTENT_PADDING = 10
         private val RESIZE_HANDLE_SIZE = 10
+        private const val BASE_TITLE_FONT_SIZE = 12
+        private const val BASE_CODE_FONT_SIZE = 12
     }
 
     init {
@@ -73,6 +75,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         titleLabel = JBLabel(node.displayName).apply {
             foreground = NODE_TEXT_COLOR
             font = font.deriveFont(Font.BOLD)
+            // Base font size will be scaled by zoom factor in updateFontSizes()
         }
         add(titleLabel, BorderLayout.NORTH)
 
@@ -111,6 +114,24 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
             preferredSize = Dimension(250, 200)
         }
     }
+    
+    /**
+     * Updates font sizes based on the current zoom factor
+     */
+    fun updateFontSizes(zoomFactor: Double) {
+        // Update title font
+        val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(8)
+        titleLabel.font = titleLabel.font.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
+        
+        // Update code area font if present
+        codeArea?.let { area ->
+            val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(8)
+            area.font = Font("Monospaced", Font.PLAIN, scaledCodeSize)
+        }
+        
+        revalidate()
+        repaint()
+    }
 
     private fun setupCodeSnippetView() {
         val code = node.getCodeSnippet(project)
@@ -120,6 +141,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         newCodeArea.isEditable = false
         newCodeArea.isEnabled = false  // Prevent selection
         newCodeArea.highlighter = null // Disable highlighting
+        // Base code font size will be scaled by zoom factor in updateFontSizes()
         newCodeArea.font = Font("Monospaced", Font.PLAIN, 12)
         newCodeArea.background = NODE_BACKGROUND
         newCodeArea.foreground = NODE_TEXT_COLOR

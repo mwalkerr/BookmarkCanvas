@@ -100,6 +100,10 @@ class CanvasPanel(val project: Project) : JPanel() {
         val scaledHeight = (prefSize.height * zoomFactor).toInt()
 
         nodeComponent.setBounds(x, y, scaledWidth, scaledHeight)
+        
+        // Apply font scaling to the new node
+        nodeComponent.updateFontSizes(zoomFactor)
+        
         nodeComponents[node.id] = nodeComponent
     }
 
@@ -455,6 +459,9 @@ class CanvasPanel(val project: Project) : JPanel() {
             val scaledWidth = (prefSize.width * zoomFactor).toInt()
             val scaledHeight = (prefSize.height * zoomFactor).toInt()
             nodeComp.setSize(scaledWidth, scaledHeight)
+            
+            // Update font sizes based on zoom factor
+            nodeComp.updateFontSizes(zoomFactor)
         }
 
         revalidate()
