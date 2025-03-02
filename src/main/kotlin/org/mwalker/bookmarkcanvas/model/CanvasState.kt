@@ -13,6 +13,11 @@ class CanvasState {
     var snapToGrid: Boolean = false
     var showGrid: Boolean = false
     
+    // Canvas view state
+    var zoomFactor: Double = 1.0
+    var scrollPositionX: Int = 0
+    var scrollPositionY: Int = 0
+    
     // History for undo functionality
     private val history = mutableListOf<CanvasStateSnapshot>()
     private var historyIndex = -1
@@ -98,7 +103,10 @@ class CanvasState {
             nodes = nodes.mapValues { it.value.copy() },
             connections = connections.map { it.copy() },
             snapToGrid = snapToGrid,
-            showGrid = showGrid
+            showGrid = showGrid,
+            zoomFactor = zoomFactor,
+            scrollPositionX = scrollPositionX,
+            scrollPositionY = scrollPositionY
         )
         
         // Add to history, limit history size to prevent memory issues
@@ -121,6 +129,9 @@ class CanvasState {
         connections.addAll(snapshot.connections)
         snapToGrid = snapshot.snapToGrid
         showGrid = snapshot.showGrid
+        zoomFactor = snapshot.zoomFactor
+        scrollPositionX = snapshot.scrollPositionX
+        scrollPositionY = snapshot.scrollPositionY
         
         isUndoRedo = false
     }
@@ -130,6 +141,9 @@ class CanvasState {
         val nodes: Map<String, BookmarkNode>,
         val connections: List<NodeConnection>,
         val snapToGrid: Boolean,
-        val showGrid: Boolean
+        val showGrid: Boolean,
+        val zoomFactor: Double,
+        val scrollPositionX: Int,
+        val scrollPositionY: Int
     )
 }

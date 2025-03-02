@@ -23,6 +23,13 @@ class PersistentCanvasState : BaseState() {
     var connections by list<SerializableConnection>()
     var snapToGrid by property(false)
     var showGrid by property(false)
+    var zoomFactor by property(1.0f) {
+        if (it < 0.1) 0.1f
+        else if (it > 2.0) 2.0f
+        else it
+    }
+    var scrollPositionX by property(0)
+    var scrollPositionY by property(0)
 }
 
 /**
@@ -170,9 +177,12 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                     canvasState.addConnection(connection)
                 }
                 
-                // Set grid preferences
+                // Set grid preferences and view state
                 canvasState.snapToGrid = persistentState.snapToGrid
                 canvasState.showGrid = persistentState.showGrid
+                canvasState.zoomFactor = persistentState.zoomFactor.toDouble()
+                canvasState.scrollPositionX = persistentState.scrollPositionX
+                canvasState.scrollPositionY = persistentState.scrollPositionY
                 
                 projectCanvasMap[projectId] = canvasState
                 return canvasState
@@ -210,12 +220,15 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
             persistentState.connections.add(serialConn)
         }
         
-        // Save grid preferences
+        // Save grid preferences and view state
         persistentState.snapToGrid = canvasState.snapToGrid
         persistentState.showGrid = canvasState.showGrid
+        persistentState.zoomFactor = canvasState.zoomFactor.toFloat()
+        persistentState.scrollPositionX = canvasState.scrollPositionX
+        persistentState.scrollPositionY = canvasState.scrollPositionY
         
         // Update serialized state
-        state.projectStates[projectId] = persistentState
+        state.projectStates.put(projectId, persistentState)
         
         // Make sure we commit changes to storage
         LOG.info("State updated, project count: ${state.projectStates.size}")

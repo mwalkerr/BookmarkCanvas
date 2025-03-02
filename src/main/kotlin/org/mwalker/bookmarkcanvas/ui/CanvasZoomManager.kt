@@ -19,7 +19,9 @@ class CanvasZoomManager(
      */
     fun zoomIn() {
         canvasPanel._zoomFactor *= 1.2
+        canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
+        saveViewState()
         canvasPanel.repaint()
     }
 
@@ -29,8 +31,27 @@ class CanvasZoomManager(
     fun zoomOut() {
         canvasPanel._zoomFactor /= 1.2
         if (canvasPanel._zoomFactor < 0.1) canvasPanel._zoomFactor = 0.1
+        canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
+        saveViewState()
         canvasPanel.repaint()
+    }
+    
+    /**
+     * Saves the current view state (zoom, scroll) to the canvas state
+     */
+    private fun saveViewState() {
+        // Get scroll position from parent viewport if available
+        val scrollPane = canvasPanel.parent?.parent as? JScrollPane
+        scrollPane?.viewport?.let { viewport ->
+            val viewPosition = viewport.viewPosition
+            canvasPanel.canvasState.scrollPositionX = viewPosition.x
+            canvasPanel.canvasState.scrollPositionY = viewPosition.y
+        }
+        
+        // Save state using persistence service
+        org.mwalker.bookmarkcanvas.services.CanvasPersistenceService.getInstance()
+            .saveCanvasState(canvasPanel.project, canvasPanel.canvasState)
     }
     
     /**
@@ -85,17 +106,22 @@ class CanvasZoomManager(
 
         // Then reset the zoom factor and scroll
         canvasPanel._zoomFactor = 0.8
+        canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
         canvasPanel.repaint()
         
         // Scroll to position that places the top-left node in view with some buffer space
         val scrollPane = canvasPanel.parent?.parent as? JScrollPane
         scrollPane?.viewport?.viewPosition = Point(0, 0)
-        LOG.info("scrollpane is $scrollPane")
-
-        // Reset zoom to a comfortable level
-        canvasPanel._zoomFactor = 0.8
-        updateCanvasSize()
-        canvasPanel.repaint()
+        
+        // Update scroll position in state
+        canvasPanel.canvasState.scrollPositionX = 0
+        canvasPanel.canvasState.scrollPositionY = 0
+        
+        // Save the state
+        org.mwalker.bookmarkcanvas.services.CanvasPersistenceService.getInstance()
+            .saveCanvasState(canvasPanel.project, canvasPanel.canvasState)
+            
+        LOG.info("Reset view position and saved state")
     }
 }

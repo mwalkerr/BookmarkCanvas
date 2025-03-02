@@ -1,11 +1,13 @@
 package org.mwalker.bookmarkcanvas.ui
 
+import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
 import java.awt.Cursor
 import java.awt.Point
 import java.awt.event.*
+import javax.swing.JScrollPane
 import javax.swing.SwingUtilities
 
 /**
@@ -108,7 +110,9 @@ class CanvasEventHandler(
 
             override fun mouseReleased(e: MouseEvent) {
                 LOG.info("Mouse released on canvas, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
-                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}, connectionStartNode is null: ${canvasPanel.connectionStartNode == null}")
+                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}, " +
+                        "connectionStartNode is null: ${canvasPanel.connectionStartNode == null}, isPanning: ${canvasPanel.isPanning}, isDrawingSelectionBox: ${canvasPanel.isDrawingSelectionBox}, " +
+                        "component at point: ${canvasPanel.getComponentAt(e.point)}")
 
                 if (canvasPanel.connectionStartNode != null) {
                     // Try to find if there's a node at the release point
@@ -129,12 +133,15 @@ class CanvasEventHandler(
                     canvasPanel.selectionStart = null
                     canvasPanel.selectionEnd = null
                     canvasPanel.repaint()
-                } else if (e.isPopupTrigger && 
+                } else if ((e.isPopupTrigger || SwingUtilities.isRightMouseButton(e)) &&
                          e.source == canvasPanel && 
                          canvasPanel.getComponentAt(e.point) == canvasPanel) {
+                    LOG.info("isPopupTrigger on canvas, showing context menu")
                     // Show context menu only if right-click without drag on canvas background
-                    if (canvasPanel.dragStartPoint != null && 
-                       (Math.abs(e.point.x - canvasPanel.dragStartPoint!!.x) < 5 && Math.abs(e.point.y - canvasPanel.dragStartPoint!!.y) < 5)) {
+                    if ((canvasPanel.dragStartPoint == null) || (
+                                (Math.abs(e.point.x - canvasPanel.dragStartPoint!!.x) < 5 && Math.abs(e.point.y - canvasPanel.dragStartPoint!!.y) < 5))
+                    ) {
+                        LOG.info("Showing canvas context menu")
                         canvasPanel.showCanvasContextMenu(e.point)
                     }
                 }
@@ -199,6 +206,16 @@ class CanvasEventHandler(
         
         // Update drag start point
         canvasPanel.dragStartPoint = e.point
+        
+        // Save scroll position
+        val scrollPane = canvasPanel.parent?.parent as? JScrollPane
+        scrollPane?.viewport?.let { viewport ->
+            val viewPosition = viewport.viewPosition
+            canvasPanel.canvasState.scrollPositionX = viewPosition.x
+            canvasPanel.canvasState.scrollPositionY = viewPosition.y
+            CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
+        }
+        
         canvasPanel.repaint()
     }
     
@@ -251,6 +268,15 @@ class CanvasEventHandler(
                 } else {
                     // Zoom out
                     canvasPanel.zoomOut()
+                }
+                
+                // Save scroll position
+                val scrollPane = canvasPanel.parent?.parent as? JScrollPane
+                scrollPane?.viewport?.let { viewport ->
+                    val viewPosition = viewport.viewPosition
+                    canvasPanel.canvasState.scrollPositionX = viewPosition.x
+                    canvasPanel.canvasState.scrollPositionY = viewPosition.y
+                    CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
                 }
             }
         }

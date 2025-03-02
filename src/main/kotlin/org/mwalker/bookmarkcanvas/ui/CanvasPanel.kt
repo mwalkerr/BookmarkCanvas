@@ -67,6 +67,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Initialize grid settings from canvas state
         _snapToGrid = canvasState.snapToGrid
         _showGrid = canvasState.showGrid
+        _zoomFactor = canvasState.zoomFactor
         
         layout = null // Free positioning
         background = CANVAS_BACKGROUND
@@ -85,6 +86,12 @@ class CanvasPanel(val project: Project) : JPanel() {
 
         // Initial size - large to allow unlimited panning
         preferredSize = Dimension(5000, 5000)
+        
+        // Restore scroll position after initialization
+        SwingUtilities.invokeLater {
+            val scrollPane = parent?.parent as? JScrollPane
+            scrollPane?.viewport?.viewPosition = Point(canvasState.scrollPositionX, canvasState.scrollPositionY)
+        }
     }
 
     private fun initializeNodes() {
@@ -183,6 +190,9 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Update canvas state
         canvasState.setGridPreferences(_snapToGrid, _showGrid)
         
+        // Persist the state
+        CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
+        
         if (_snapToGrid) {
             // Snap all existing nodes to grid
             for (nodeComp in nodeComponents.values) {
@@ -203,6 +213,9 @@ class CanvasPanel(val project: Project) : JPanel() {
         
         // Update canvas state
         canvasState.setGridPreferences(_snapToGrid, _showGrid)
+        
+        // Persist the state
+        CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
         
         repaint()
     }
