@@ -37,18 +37,6 @@ class CanvasContextMenuManager(
             showAddBookmarkDialog(point)
         }
         menu.add(addBookmarkItem)
-        
-        val addAllBookmarksItem = JMenuItem("Add All Bookmarks")
-        addAllBookmarksItem.addActionListener {
-            refreshBookmarks()
-        }
-        menu.add(addAllBookmarksItem)
-
-        val clearCanvasItem = JMenuItem("Clear Canvas")
-        clearCanvasItem.addActionListener {
-            canvasPanel.clearCanvas()
-        }
-        menu.add(clearCanvasItem)
 
         menu.show(canvasPanel, point.x, point.y)
     }
@@ -76,6 +64,13 @@ class CanvasContextMenuManager(
         dialog.layout = BorderLayout()
         dialog.isModal = true
         
+        // Add escape key handler to close the dialog
+        dialog.rootPane.registerKeyboardAction(
+            { dialog.dispose() },
+            javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
+        
         val bookmarkList = JList(allBookmarks.toTypedArray())
         bookmarkList.cellRenderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(
@@ -91,6 +86,29 @@ class CanvasContextMenuManager(
                 return label
             }
         }
+        
+        // Add double-click handler to add the selected bookmark
+        bookmarkList.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                if (e.clickCount == 2) {
+                    val selectedBookmark = bookmarkList.selectedValue
+                    if (selectedBookmark != null) {
+                        // Create a copy of the bookmark with new position
+                        val nodeCopy = selectedBookmark.copy(
+                            id = "bookmark_" + System.currentTimeMillis(),
+                            positionX = (point.x / canvasPanel.zoomFactor).toInt(),
+                            positionY = (point.y / canvasPanel.zoomFactor).toInt()
+                        )
+                        
+                        canvasPanel.canvasState.addNode(nodeCopy)
+                        canvasPanel.addNodeComponent(nodeCopy)
+                        CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
+                        canvasPanel.repaint()
+                        dialog.dispose()
+                    }
+                }
+            }
+        })
         
         val scrollPane = JScrollPane(bookmarkList)
         dialog.add(scrollPane, BorderLayout.CENTER)

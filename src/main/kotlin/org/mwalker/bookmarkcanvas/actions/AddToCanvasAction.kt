@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull
 import javax.swing.JComponent
 import javax.swing.JScrollPane
 import com.intellij.openapi.diagnostic.Logger
+import org.mwalker.bookmarkcanvas.ui.CanvasToolbar
 
 
 class AddToCanvasAction : AnAction() {
@@ -38,16 +39,21 @@ class AddToCanvasAction : AnAction() {
         // Save state
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
 
+
         // Make sure the tool window is visible
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("BookmarkCanvas")
+        LOG.info("AddToCanvasAction.actionPerformed called, toolWindow: $toolWindow, isVisible: ${toolWindow?.isVisible}")
         if (toolWindow != null && !toolWindow.isVisible) {
             toolWindow.show(null)
         }
 
+        LOG.info("AddToCanvasAction.actionPerformed called, toolWindow: $toolWindow, isActive: ${toolWindow?.isActive}")
         // Refresh the UI if the tool window is open
-        if (toolWindow != null && toolWindow.isActive) {
+//        if (toolWindow != null && toolWindow.isActive) {
+        if (toolWindow != null) {
             // Find the canvas panel and trigger a refresh
             val canvasPanel = findCanvasPanel(toolWindow)
+            LOG.info("AddToCanvasAction.actionPerformed called, canvasPanel: $canvasPanel")
             if (canvasPanel != null) {
                 canvasPanel.addNodeComponent(node)
                 canvasPanel.revalidate()
@@ -58,13 +64,7 @@ class AddToCanvasAction : AnAction() {
 
     private fun findCanvasPanel(toolWindow: ToolWindow): CanvasPanel? {
         val component = toolWindow.contentManager.getContent(0)?.component
-        if (component is JScrollPane) {
-            val viewport = component.viewport
-            if (viewport.view is CanvasPanel) {
-                return viewport.view as CanvasPanel
-            }
-        }
-        return null
+        return (component as? CanvasToolbar)?.canvasPanel
     }
 
     override fun update(@NotNull e: AnActionEvent) {

@@ -9,7 +9,7 @@ import javax.swing.JScrollPane
 import java.awt.Dimension
 
 class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, true) {
-    private val canvasPanel: org.mwalker.bookmarkcanvas.ui.CanvasPanel
+    val canvasPanel: org.mwalker.bookmarkcanvas.ui.CanvasPanel
 
     init {
         // Create the canvas panel
@@ -31,8 +31,6 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         actionGroup.addSeparator()
         
         // Add other actions
-        actionGroup.add(org.mwalker.bookmarkcanvas.actions.RefreshBookmarksAction(project, canvasPanel))
-        actionGroup.add(ClearCanvasAction(project, canvasPanel))
         actionGroup.add(ToggleSnapToGridAction(canvasPanel))
         actionGroup.add(ToggleShowGridAction(canvasPanel))
         actionGroup.add(ExportCanvasAction(project, canvasPanel))
