@@ -23,6 +23,14 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
 
         // Create toolbar actions
         val actionGroup = DefaultActionGroup("CANVAS_TOOLBAR", false)
+        // Add editing actions
+        actionGroup.add(UndoAction(canvasPanel))
+        actionGroup.add(RedoAction(canvasPanel))
+        
+        // Add separator
+        actionGroup.addSeparator()
+        
+        // Add other actions
         actionGroup.add(org.mwalker.bookmarkcanvas.actions.RefreshBookmarksAction(project, canvasPanel))
         actionGroup.add(ClearCanvasAction(project, canvasPanel))
         actionGroup.add(ToggleSnapToGridAction(canvasPanel))

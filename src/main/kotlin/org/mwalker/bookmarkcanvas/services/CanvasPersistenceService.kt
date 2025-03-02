@@ -21,6 +21,8 @@ class PersistentCanvasState : BaseState() {
     var projectId by string("")
     var nodeMap by map<String, SerializableNode>()
     var connections by list<SerializableConnection>()
+    var snapToGrid by property(false)
+    var showGrid by property(false)
 }
 
 /**
@@ -168,6 +170,10 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                     canvasState.addConnection(connection)
                 }
                 
+                // Set grid preferences
+                canvasState.snapToGrid = persistentState.snapToGrid
+                canvasState.showGrid = persistentState.showGrid
+                
                 projectCanvasMap[projectId] = canvasState
                 return canvasState
             } catch (e: Exception) {
@@ -203,6 +209,10 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
             val serialConn = SerializableConnection.fromNodeConnection(connection)
             persistentState.connections.add(serialConn)
         }
+        
+        // Save grid preferences
+        persistentState.snapToGrid = canvasState.snapToGrid
+        persistentState.showGrid = canvasState.showGrid
         
         // Update serialized state
         state.projectStates[projectId] = persistentState

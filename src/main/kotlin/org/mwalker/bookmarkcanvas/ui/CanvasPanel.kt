@@ -27,10 +27,11 @@ class CanvasPanel(val project: Project) : JPanel() {
     var tempConnectionEndPoint: Point? = null
     private var _zoomFactor = 1.0
     val zoomFactor: Double get() = _zoomFactor
-    var snapToGrid = false
-        private set
-    var showGrid = false
-        private set
+    // Delegate grid properties to canvas state
+    private var _snapToGrid: Boolean = false
+    private var _showGrid: Boolean = false
+    
+    // Grid properties
     val GRID_SIZE = 20
     
     companion object {
@@ -55,6 +56,10 @@ class CanvasPanel(val project: Project) : JPanel() {
     }
 
     init {
+        // Initialize grid settings from canvas state
+        _snapToGrid = canvasState.snapToGrid
+        _showGrid = canvasState.showGrid
+        
         layout = null // Free positioning
         background = CANVAS_BACKGROUND
 
@@ -76,23 +81,24 @@ class CanvasPanel(val project: Project) : JPanel() {
         add(nodeComponent)
 
         // Stagger new nodes to prevent overlap
-        if (node.position.x == 100 && node.position.y == 100) {
+        if (node.positionX == 100 && node.positionY == 100) {
             // Find a free position
             val offset = nodeComponents.size * 30
-            node.position = Point(100 + offset, 100 + offset)
+            node.positionX = 100 + offset
+            node.positionY = 100 + offset
         }
         
         // Apply zoom and snap if necessary
-        val pos = node.position
-        var x = (pos.x * zoomFactor).toInt()
-        var y = (pos.y * zoomFactor).toInt()
+        var x = (node.positionX * zoomFactor).toInt()
+        var y = (node.positionY * zoomFactor).toInt()
         
         // Apply snapping if enabled
         if (snapToGrid) {
             val gridSize = (GRID_SIZE * zoomFactor).toInt()
             x = (x / gridSize) * gridSize
             y = (y / gridSize) * gridSize
-            node.position = Point(x / zoomFactor.toInt(), y / zoomFactor.toInt())
+            node.positionX = (x / zoomFactor).toInt()
+            node.positionY = (y / zoomFactor).toInt()
         }
 
         val prefSize = nodeComponent.preferredSize
@@ -105,6 +111,24 @@ class CanvasPanel(val project: Project) : JPanel() {
         nodeComponent.updateFontSizes(zoomFactor)
         
         nodeComponents[node.id] = nodeComponent
+    }
+    
+    fun refreshFromState() {
+        // First clear existing node components
+        removeAll()
+        nodeComponents.clear()
+        selectedNodes.clear()
+        connectionStartNode = null
+        tempConnectionEndPoint = null
+        
+        // Recreate node components from canvas state
+        for (node in canvasState.nodes.values) {
+            addNodeComponent(node)
+        }
+        
+        // Request repaint to reflect all changes
+        revalidate()
+        repaint()
     }
 
     private fun isModifierKeyDown(e: InputEvent): Boolean {
@@ -422,24 +446,41 @@ class CanvasPanel(val project: Project) : JPanel() {
         repaint()
     }
 
+    // Property accessors 
+    val snapToGrid: Boolean
+        get() = _snapToGrid
+    
+    val showGrid: Boolean
+        get() = _showGrid
+    
     fun setSnapToGrid(value: Boolean) {
-        snapToGrid = value
-        showGrid = value // Show grid when snap is enabled
-        if (snapToGrid) {
+        _snapToGrid = value
+        _showGrid = value // Show grid when snap is enabled
+        
+        // Update canvas state
+        canvasState.setGridPreferences(_snapToGrid, _showGrid)
+        
+        if (_snapToGrid) {
             // Snap all existing nodes to grid
             for (nodeComp in nodeComponents.values) {
                 val location = nodeComp.location
                 val x = (location.x / GRID_SIZE).toInt() * GRID_SIZE
                 val y = (location.y / GRID_SIZE).toInt() * GRID_SIZE
                 nodeComp.setLocation(x, y)
-                nodeComp.node.position = Point((x / zoomFactor).toInt(), (y / zoomFactor).toInt())
+                val node = nodeComp.node
+                node.positionX = (x / zoomFactor).toInt()
+                node.positionY = (y / zoomFactor).toInt()
             }
         }
         repaint()
     }
     
     fun setShowGrid(value: Boolean) {
-        showGrid = value
+        _showGrid = value
+        
+        // Update canvas state
+        canvasState.setGridPreferences(_snapToGrid, _showGrid)
+        
         repaint()
     }
 

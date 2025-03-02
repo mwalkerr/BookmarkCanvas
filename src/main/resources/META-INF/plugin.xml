@@ -27,5 +27,20 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu.GoTo" anchor="last"/>
         </action>
+        
+        <!-- Canvas-specific actions -->
+        <action id="BookmarkCanvas.Undo"
+                class="org.mwalker.bookmarkcanvas.actions.UndoAction"
+                text="Undo"
+                description="Undo the last canvas action">
+            <keyboard-shortcut first-keystroke="control Z" keymap="$default"/>
+        </action>
+        
+        <action id="BookmarkCanvas.Redo"
+                class="org.mwalker.bookmarkcanvas.actions.RedoAction"
+                text="Redo"
+                description="Redo the last undone canvas action">
+            <keyboard-shortcut first-keystroke="control shift Z" keymap="$default"/>
+        </action>
     </actions>
 </idea-plugin>
