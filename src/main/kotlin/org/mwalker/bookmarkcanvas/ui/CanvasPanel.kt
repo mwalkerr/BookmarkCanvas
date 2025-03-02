@@ -13,6 +13,7 @@ import java.awt.geom.Line2D
 import java.awt.geom.Point2D
 import java.awt.geom.Rectangle2D
 import javax.swing.*
+import javax.swing.DefaultListCellRenderer
 
 class CanvasPanel(val project: Project) : JPanel() {
     val canvasState: org.mwalker.bookmarkcanvas.model.CanvasState = CanvasPersistenceService.getInstance().getCanvasState(project)
@@ -402,11 +403,18 @@ class CanvasPanel(val project: Project) : JPanel() {
 
     private fun showCanvasContextMenu(point: Point) {
         val menu = JPopupMenu()
-        val addNodeItem = JMenuItem("Add All Bookmarks")
-        addNodeItem.addActionListener {
+        
+        val addBookmarkItem = JMenuItem("Add Bookmark")
+        addBookmarkItem.addActionListener {
+            showAddBookmarkDialog(point)
+        }
+        menu.add(addBookmarkItem)
+        
+        val addAllBookmarksItem = JMenuItem("Add All Bookmarks")
+        addAllBookmarksItem.addActionListener {
             refreshBookmarks()
         }
-        menu.add(addNodeItem)
+        menu.add(addAllBookmarksItem)
 
         val clearCanvasItem = JMenuItem("Clear Canvas")
         clearCanvasItem.addActionListener {
@@ -416,11 +424,111 @@ class CanvasPanel(val project: Project) : JPanel() {
 
         menu.show(this, point.x, point.y)
     }
+    
+    private fun showAddBookmarkDialog(point: Point) {
+        // Get all available bookmarks
+        val allBookmarks = org.mwalker.bookmarkcanvas.services.BookmarkService.getAllBookmarkNodes(project)
+        
+        if (allBookmarks.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "No bookmarks found. Create bookmarks in your editor first.",
+                "No Bookmarks",
+                JOptionPane.INFORMATION_MESSAGE
+            )
+            return
+        }
+        
+        // Create dialog for selecting a bookmark
+        val dialog = JDialog()
+        dialog.title = "Select Bookmark"
+        dialog.layout = BorderLayout()
+        dialog.isModal = true
+        
+        val bookmarkList = JList(allBookmarks.toTypedArray())
+        bookmarkList.cellRenderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>?,
+                value: Any?,
+                index: Int,
+                isSelected: Boolean,
+                cellHasFocus: Boolean
+            ): Component {
+                val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
+                val bookmark = value as org.mwalker.bookmarkcanvas.model.BookmarkNode
+                label.text = bookmark.displayName
+                return label
+            }
+        }
+        
+        val scrollPane = JScrollPane(bookmarkList)
+        dialog.add(scrollPane, BorderLayout.CENTER)
+        
+        val buttonPanel = JPanel()
+        buttonPanel.layout = FlowLayout(FlowLayout.RIGHT)
+        val addButton = JButton("Add")
+        addButton.addActionListener {
+            val selectedBookmark = bookmarkList.selectedValue
+            if (selectedBookmark != null) {
+                // Create a copy of the bookmark with new position
+                val nodeCopy = selectedBookmark.copy(
+                    id = "bookmark_" + System.currentTimeMillis(),
+                    positionX = (point.x / zoomFactor).toInt(),
+                    positionY = (point.y / zoomFactor).toInt()
+                )
+                
+                canvasState.addNode(nodeCopy)
+                addNodeComponent(nodeCopy)
+                CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
+                repaint()
+            }
+            dialog.dispose()
+        }
+        
+        val cancelButton = JButton("Cancel")
+        cancelButton.addActionListener { dialog.dispose() }
+        
+        buttonPanel.add(addButton)
+        buttonPanel.add(cancelButton)
+        dialog.add(buttonPanel, BorderLayout.SOUTH)
+        
+        dialog.pack()
+        dialog.setSize(400, 300)
+        dialog.setLocationRelativeTo(this)
+        dialog.isVisible = true
+    }
 
     private fun refreshBookmarks() {
-        // This would fetch all bookmarks from the IDE
+        // Fetch all bookmarks from the IDE
+        val bookmarks = org.mwalker.bookmarkcanvas.services.BookmarkService.getAllBookmarkNodes(project)
+        
         // For each bookmark not already on canvas, add a new node
-        // Code to integrate with IDE bookmark system would go here
+        var added = 0
+        for (bookmark in bookmarks) {
+            // Check if this bookmark is already on the canvas
+            val existing = canvasState.nodes.values.find { 
+                it.bookmarkId == bookmark.bookmarkId 
+            }
+            
+            if (existing == null) {
+                // Find free position for new node
+                val offset = nodeComponents.size * 30
+                val newNode = bookmark.copy(
+                    id = "bookmark_" + System.currentTimeMillis(),
+                    positionX = 100 + offset,
+                    positionY = 100 + offset
+                )
+                
+                canvasState.addNode(newNode)
+                addNodeComponent(newNode)
+                added++
+            }
+        }
+        
+        if (added > 0) {
+            CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
+            repaint()
+        }
     }
 
     fun clearCanvas() {
@@ -442,6 +550,48 @@ class CanvasPanel(val project: Project) : JPanel() {
     fun zoomOut() {
         _zoomFactor /= 1.2
         if (_zoomFactor < 0.1) _zoomFactor = 0.1
+        updateCanvasSize()
+        repaint()
+    }
+
+    // go to top left node. Do this by finding the min x of all nodes and the min y of all nodes
+    // then update all nodes such that the min x and y are 0. So each node needs to move each coordinate by its distance from the old min
+    fun goToTopLeftNode() {
+
+        // Find the top-left most node (minimum x and y position)
+        if (canvasState.nodes.isEmpty()) return
+
+        val minX = canvasState.nodes.values.minOfOrNull {
+            it.positionX
+        } ?: return
+
+        val minY = canvasState.nodes.values.minOfOrNull {
+            it.positionY
+        } ?: return
+
+        for (nodeComp in nodeComponents.values) {
+            val x = nodeComp.node.positionX - minX
+            val y = nodeComp.node.positionY - minY
+            nodeComp.setLocation(x, y)
+            nodeComp.node.positionX = x
+            nodeComp.node.positionY = y
+        }
+
+        // then reset the zoom factor and scroll
+        _zoomFactor = 0.8
+        updateCanvasSize()
+        repaint()
+        // Calculate buffer space (padding from the edge of the viewport)
+        val bufferSpace = 20
+
+        // Scroll to position that places the top-left node in view with some buffer space
+        val scrollPane = parent?.parent as? JScrollPane
+
+        scrollPane?.viewport?.viewPosition = Point( 0, 0 )
+        LOG.info("scrollpane is $scrollPane")
+
+        // Reset zoom to a comfortable level
+        _zoomFactor = 0.8
         updateCanvasSize()
         repaint()
     }

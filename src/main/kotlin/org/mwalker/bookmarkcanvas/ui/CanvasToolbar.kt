@@ -36,6 +36,11 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         actionGroup.add(ToggleSnapToGridAction(canvasPanel))
         actionGroup.add(ToggleShowGridAction(canvasPanel))
         actionGroup.add(ExportCanvasAction(project, canvasPanel))
+        
+        // Add separator for zoom and navigation
+        actionGroup.addSeparator()
+        
+        actionGroup.add(org.mwalker.bookmarkcanvas.actions.HomeAction(canvasPanel))
         actionGroup.add(org.mwalker.bookmarkcanvas.actions.ZoomInAction(canvasPanel))
         actionGroup.add(ZoomOutAction(canvasPanel))
 
