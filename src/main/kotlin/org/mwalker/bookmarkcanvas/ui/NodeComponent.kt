@@ -15,10 +15,14 @@ import javax.swing.*
 import javax.swing.border.CompoundBorder
 import javax.swing.border.EmptyBorder
 import javax.swing.border.LineBorder
+import javax.swing.text.JTextComponent
+import javax.swing.text.View
 import kotlin.math.abs
 
 class NodeComponent(val node: BookmarkNode, private val project: Project) : JPanel() {
-    private val titleLabel: JBLabel
+    private val titleLabel: JBLabel // Kept for compatibility with existing code
+    private lateinit var titleTextPane: JTextPane // For displaying wrapped title
+    private lateinit var titlePanel: JPanel // Panel containing the title
     private var codeArea: JBTextArea? = null
     private var dragStart: Point? = null
     private var isDragging = false
@@ -71,13 +75,40 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         )
         background = NODE_BACKGROUND
 
-        // Title area
-        titleLabel = JBLabel(node.displayName).apply {
+        // Title area - use JTextPane for better text wrapping
+        titleTextPane = object : JTextPane() {
+            override fun contains(x: Int, y: Int): Boolean {
+                return false
+            }
+        }.apply {
+            text = node.displayName
             foreground = NODE_TEXT_COLOR
+            document.putProperty("ForegroundColor", NODE_TEXT_COLOR)  // Ensure StyledDocument uses correct color
             font = font.deriveFont(Font.BOLD)
-            // Base font size will be scaled by zoom factor in updateFontSizes()
+            isEditable = false
+            isOpaque = false
+            border = EmptyBorder(0, 0, 0, 0)
+            // Disable text selection
+            highlighter = null
+            // Set size directly to ensure wrapping
+            setSize(250, 30) // Minimum height to ensure text is visible
         }
-        add(titleLabel, BorderLayout.NORTH)
+        
+        // Wrap in a panel for proper layout
+        titlePanel = JPanel(BorderLayout())
+        titlePanel.isOpaque = false
+        titlePanel.add(titleTextPane, BorderLayout.CENTER)
+        
+        // Store reference as titleLabel for compatibility with existing code
+        titleLabel = object : JBLabel() {
+            override fun contains(x: Int, y: Int): Boolean {
+                return false
+            }
+        }.apply {
+            isVisible = false // Not actually used for display
+        }
+        
+        add(titlePanel, BorderLayout.NORTH)
 
         // Code snippet area (initially hidden)
         if (node.showCodeSnippet) {
@@ -98,21 +129,67 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
     }
     
     private fun updatePreferredSize() {
+        LOG.info("Updating size for node: ${node.displayName}, showCodeSnippet: ${node.showCodeSnippet}")
         if (!node.showCodeSnippet) {
-            val fontMetrics = titleLabel.getFontMetrics(titleLabel.font)
-            val textWidth = fontMetrics.stringWidth(titleLabel.text)
-            val textHeight = fontMetrics.height
+            // Calculate text height using LineBreakMeasurer for accurate wrapping
+            val displayText = node.displayName
+            val maxWidth = 250 - (CONTENT_PADDING * 2)
             
-            val width = textWidth + (CONTENT_PADDING * 2) + 20 // Extra padding for better appearance
-            val height = textHeight + (TITLE_PADDING * 2) + 10
+            // Calculate text height with line break measurer
+            val textHeight = calculateTextHeight(displayText, titleTextPane.font, maxWidth)
             
-            preferredSize = Dimension(
-                width.coerceAtLeast(120), // Minimum width
-                height.coerceAtLeast(40)  // Minimum height
+            // Add padding to text height
+            val totalHeight = textHeight + (TITLE_PADDING * 2) + 10
+            
+            // Set size directly for title pane
+            val titleSize = Dimension(maxWidth, textHeight.coerceAtLeast(20))
+            titleTextPane.setSize(titleSize)
+            titleTextPane.preferredSize = titleSize
+
+            // Use both setSize and preferredSize for better compatibility
+            val newSize = Dimension(
+                maxWidth + (CONTENT_PADDING * 2), // Width with padding
+                totalHeight.coerceAtLeast(40)     // Minimum height
             )
+
+            setSize(newSize)
+            preferredSize = newSize
         } else {
-            preferredSize = Dimension(250, 200)
+            val newSize = Dimension(250, 200)
+            setSize(newSize)
+            preferredSize = newSize
         }
+        LOG.info("New preferred size: $preferredSize")
+    }
+
+    /**
+     * Calculates text height using LineBreakMeasurer for accurate line wrapping
+     */
+    private fun calculateTextHeight(text: String, font: Font, width: Int): Int {
+        LOG.info("Calculating text height for: $text, width: $width")
+        if (text.isEmpty()) return 20
+        
+        val frc = getFontRenderContext()
+        val attributedString = java.text.AttributedString(text)
+        attributedString.addAttribute(java.awt.font.TextAttribute.FONT, font)
+        
+        val iterator = attributedString.iterator
+        val measurer = java.awt.font.LineBreakMeasurer(iterator, frc)
+        
+        var y = 0
+        measurer.position = 0
+        // Calculate height by measuring each line
+        while (measurer.position < text.length) {
+            val layout = measurer.nextLayout(width.toFloat())
+            y += ((layout.ascent + layout.descent + layout.leading) * 2).toInt()
+        }
+        
+        return y.coerceAtLeast(20) // Minimum height of 20 pixels
+    }
+    
+    private fun getFontRenderContext(): java.awt.font.FontRenderContext {
+        return (getGraphics() as? Graphics2D)?.fontRenderContext 
+            ?: java.awt.font.FontRenderContext(null, true, true)
     }
     
     /**
@@ -121,7 +198,11 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
     fun updateFontSizes(zoomFactor: Double) {
         // Update title font
         val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(8)
-        titleLabel.font = titleLabel.font.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
+        titleTextPane.font = titleTextPane.font.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
+        
+        // Ensure foreground color is set (fixes visibility issues)
+        titleTextPane.foreground = NODE_TEXT_COLOR
+        titleTextPane.document.putProperty("ForegroundColor", NODE_TEXT_COLOR)
         
         // Update code area font if present
         codeArea?.let { area ->
@@ -161,7 +242,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         
         // Create scroll pane
         val scrollPane = JBScrollPane(newCodeArea)
-        scrollPane.preferredSize = Dimension(200, 150)
+        scrollPane.setSize(200, 150)
+        scrollPane.preferredSize = Dimension(200, 150) // Keep for layout compatibility
         scrollPane.border = LineBorder(JBColor.border(), 1)
         
         // Also apply the same event forwarding to the scroll pane
@@ -188,6 +270,12 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         }
         menu.add(navigateItem)
 
+        val editTitleItem = JMenuItem("Edit Title")
+        editTitleItem.addActionListener {
+            showEditTitleDialog()
+        }
+        menu.add(editTitleItem)
+
         val toggleSnippetItem = JMenuItem(
             if (node.showCodeSnippet) "Hide Code Snippet" else "Show Code Snippet"
         )
@@ -196,7 +284,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
 
             // Remove existing components
             removeAll()
-            add(titleLabel, BorderLayout.NORTH)
+            add(titlePanel, BorderLayout.NORTH)
 
             // Re-add code area if needed
             if (node.showCodeSnippet) {
@@ -258,7 +346,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                         if (node.showCodeSnippet) {
                             // Refresh code display
                             removeAll()
-                            add(titleLabel, BorderLayout.NORTH)
+                            add(titlePanel, BorderLayout.NORTH)
                             setupCodeSnippetView()
                             revalidate()
                             repaint()
@@ -404,9 +492,10 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                     val newWidth = (width + widthDelta).coerceAtLeast(120)
                     val newHeight = (height + heightDelta).coerceAtLeast(40)
                     
-                    // Update size
-                    setSize(newWidth, newHeight)
-                    preferredSize = Dimension(newWidth, newHeight)
+                    // Update size - use both for better compatibility
+                    val newSize = Dimension(newWidth, newHeight)
+                    setSize(newSize)
+                    preferredSize = newSize
                     
                     // Update drag start point
                     dragStart = current
@@ -441,7 +530,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
                         "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
 
                 if (SwingUtilities.isLeftMouseButton(e) && e.clickCount == 2) {
-                    // Navigate to bookmark on double-click
+                    // Navigate to bookmark on double-click anywhere in the node
                     node.navigateToBookmark(project)
                 }
             }
@@ -470,6 +559,40 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         return resizeArea.contains(point)
     }
     
+    /**
+     * Shows a dialog to edit the node title
+     */
+    private fun showEditTitleDialog() {
+        val input = JOptionPane.showInputDialog(
+            this,
+            "Enter new title:",
+            node.displayName
+        )
+
+        if (!input.isNullOrEmpty()) {
+            node.displayName = input
+            
+            // Update text and ensure proper styling
+            titleTextPane.text = input
+            titleTextPane.foreground = NODE_TEXT_COLOR
+            titleTextPane.document.putProperty("ForegroundColor", NODE_TEXT_COLOR)
+            
+            // Recalculate size based on new text
+            updatePreferredSize()
+            
+            // Update UI
+            titlePanel.revalidate()
+            revalidate()
+            repaint()
+            
+            // Save changes
+            val canvas = parent as? org.mwalker.bookmarkcanvas.ui.CanvasPanel
+            canvas?.let {
+                CanvasPersistenceService.getInstance().saveCanvasState(project, it.canvasState)
+            }
+        }
+    }
+    
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val g2d = g.create() as Graphics2D
@@ -480,7 +603,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) : JPan
         // Draw selection border and header if selected
         if (isSelected) {
             // Draw title background highlight
-            val headerRect = Rectangle(0, 0, width, titleLabel.height + TITLE_PADDING * 2)
+            val headerRect = Rectangle(0, 0, width, titlePanel.height + TITLE_PADDING)
             g2d.color = SELECTION_HEADER_COLOR
             g2d.fill(headerRect)
             

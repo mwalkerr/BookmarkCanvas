@@ -3,6 +3,8 @@
 ## Operation Notes
 - If there is any uncertainty or ambiguity in the requirements, ask for clarification
 
+## Useful info for project
+ - With AWT/Swing, events don't propagate up the component hierarchy when a listener is added to a child component, even if the child component's listener only overrides a single event type.
 
 ## Build & Run Commands
 - Build plugin: `./gradlew build`
