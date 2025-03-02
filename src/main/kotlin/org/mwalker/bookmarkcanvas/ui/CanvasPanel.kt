@@ -3,30 +3,28 @@ package org.mwalker.bookmarkcanvas.ui
 import com.intellij.openapi.diagnostic.Logger
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
-import org.mwalker.bookmarkcanvas.model.NodeConnection
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import java.awt.*
 import java.awt.event.*
-import java.awt.geom.Line2D
-import java.awt.geom.Point2D
-import java.awt.geom.Rectangle2D
 import javax.swing.*
-import javax.swing.DefaultListCellRenderer
 
+/**
+ * Main canvas panel for displaying and interacting with bookmark nodes
+ */
 class CanvasPanel(val project: Project) : JPanel() {
-    val canvasState: org.mwalker.bookmarkcanvas.model.CanvasState = CanvasPersistenceService.getInstance().getCanvasState(project)
-    private val nodeComponents = mutableMapOf<String, org.mwalker.bookmarkcanvas.ui.NodeComponent>()
-    val selectedNodes = mutableSetOf<org.mwalker.bookmarkcanvas.ui.NodeComponent>()
-    var connectionStartNode: org.mwalker.bookmarkcanvas.ui.NodeComponent? = null
-    private var dragStartPoint: Point? = null
-    private var isPanning = false
-    private var isDrawingSelectionBox = false
-    private var selectionStart: Point? = null
-    private var selectionEnd: Point? = null
+    val canvasState: CanvasState = CanvasPersistenceService.getInstance().getCanvasState(project)
+    val nodeComponents = mutableMapOf<String, NodeComponent>()
+    val selectedNodes = mutableSetOf<NodeComponent>()
+    var connectionStartNode: NodeComponent? = null
+    var dragStartPoint: Point? = null
+    var isPanning = false
+    var isDrawingSelectionBox = false
+    var selectionStart: Point? = null
+    var selectionEnd: Point? = null
     var tempConnectionEndPoint: Point? = null
-    private var _zoomFactor = 1.0
+    var _zoomFactor = 1.0
     val zoomFactor: Double get() = _zoomFactor
     // Delegate grid properties to canvas state
     private var _snapToGrid: Boolean = false
@@ -35,22 +33,31 @@ class CanvasPanel(val project: Project) : JPanel() {
     // Grid properties
     val GRID_SIZE = 20
     
+    // Helper managers
+    private val nodeManager: CanvasNodeManager
+    private val selectionManager: CanvasSelectionManager
+    private val connectionManager: CanvasConnectionManager
+    private val zoomManager: CanvasZoomManager
+    private val contextMenuManager: CanvasContextMenuManager
+    private val eventHandler: CanvasEventHandler
+    
     companion object {
         private val LOG = Logger.getInstance(NodeComponent::class.java)
 
-        private val CANVAS_BACKGROUND = JBColor(
+        // UI Colors
+        val CANVAS_BACKGROUND = JBColor(
             Color(240, 240, 240), // Light mode
             Color(30, 30, 30) // Dark mode
         )
-        private val GRID_COLOR = JBColor(
+        val GRID_COLOR = JBColor(
             Color(210, 210, 210), // Light mode
             Color(50, 50, 50) // Dark mode
         )
-        private val SELECTION_BOX_COLOR = JBColor(
+        val SELECTION_BOX_COLOR = JBColor(
             Color(100, 150, 255, 50), // Light mode with transparency
             Color(80, 120, 200, 50) // Dark mode with transparency
         )
-        private val SELECTION_BOX_BORDER_COLOR = JBColor(
+        val SELECTION_BOX_BORDER_COLOR = JBColor(
             Color(70, 130, 230), // Light mode
             Color(100, 150, 230) // Dark mode
         )
@@ -64,8 +71,17 @@ class CanvasPanel(val project: Project) : JPanel() {
         layout = null // Free positioning
         background = CANVAS_BACKGROUND
 
+        // Initialize managers
+        nodeManager = CanvasNodeManager(this, project)
+        selectionManager = CanvasSelectionManager(this)
+        connectionManager = CanvasConnectionManager(this, project)
+        zoomManager = CanvasZoomManager(this, nodeComponents)
+        contextMenuManager = CanvasContextMenuManager(this, project)
+        eventHandler = CanvasEventHandler(this, project)
+        
+        // Set up the canvas
         initializeNodes()
-        setupEventListeners()
+        eventHandler.setupEventListeners()
 
         // Initial size - large to allow unlimited panning
         preferredSize = Dimension(5000, 5000)
@@ -73,45 +89,12 @@ class CanvasPanel(val project: Project) : JPanel() {
 
     private fun initializeNodes() {
         canvasState.nodes.values.forEach { node ->
-            addNodeComponent(node)
+            nodeManager.addNodeComponent(node)
         }
     }
 
     fun addNodeComponent(node: BookmarkNode) {
-        val nodeComponent = org.mwalker.bookmarkcanvas.ui.NodeComponent(node, project)
-        add(nodeComponent)
-
-        // Stagger new nodes to prevent overlap
-        if (node.positionX == 100 && node.positionY == 100) {
-            // Find a free position
-            val offset = nodeComponents.size * 30
-            node.positionX = 100 + offset
-            node.positionY = 100 + offset
-        }
-        
-        // Apply zoom and snap if necessary
-        var x = (node.positionX * zoomFactor).toInt()
-        var y = (node.positionY * zoomFactor).toInt()
-        
-        // Apply snapping if enabled
-        if (snapToGrid) {
-            val gridSize = (GRID_SIZE * zoomFactor).toInt()
-            x = (x / gridSize) * gridSize
-            y = (y / gridSize) * gridSize
-            node.positionX = (x / zoomFactor).toInt()
-            node.positionY = (y / zoomFactor).toInt()
-        }
-
-        val prefSize = nodeComponent.preferredSize
-        val scaledWidth = (prefSize.width * zoomFactor).toInt()
-        val scaledHeight = (prefSize.height * zoomFactor).toInt()
-
-        nodeComponent.setBounds(x, y, scaledWidth, scaledHeight)
-        
-        // Apply font scaling to the new node
-        nodeComponent.updateFontSizes(zoomFactor)
-        
-        nodeComponents[node.id] = nodeComponent
+        nodeManager.addNodeComponent(node)
     }
     
     fun refreshFromState() {
@@ -124,7 +107,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         
         // Recreate node components from canvas state
         for (node in canvasState.nodes.values) {
-            addNodeComponent(node)
+            nodeManager.addNodeComponent(node)
         }
         
         // Request repaint to reflect all changes
@@ -132,403 +115,32 @@ class CanvasPanel(val project: Project) : JPanel() {
         repaint()
     }
 
-    private fun isModifierKeyDown(e: InputEvent): Boolean {
-        return e.isControlDown || e.isMetaDown // Check for ctrl or cmd key
-    }
-
-    private fun setupEventListeners() {
-        // Mouse listener for creating new connections and canvas interaction
-        val mouseAdapter = object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) {
-                LOG.info("Mouse pressed on canvas, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
-                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
-
-                requestFocusInWindow() // Ensure panel can receive key events
-                
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (isModifierKeyDown(e) && e.source == this@CanvasPanel) {
-                        // Ctrl/Cmd + left click on canvas starts panning
-                        isPanning = true
-                        dragStartPoint = e.point
-                        cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
-                    } else if (e.source == this@CanvasPanel && getComponentAt(e.point) == this@CanvasPanel) {
-                        // Left click on canvas starts selection box
-                        isDrawingSelectionBox = true
-                        selectionStart = e.point
-                        selectionEnd = e.point
-                        
-                        // Clear selection if not holding shift
-                        if (!e.isShiftDown) {
-                            clearSelection()
-                        }
-                    } else {
-                        // Clicking on a component that isn't the canvas directly
-                        // Check if it's from a forwarded event from a node
-                        val targetNode = if (e.source is org.mwalker.bookmarkcanvas.ui.NodeComponent) {
-                            e.source as org.mwalker.bookmarkcanvas.ui.NodeComponent
-                        } else {
-                            getComponentAt(e.point) as? org.mwalker.bookmarkcanvas.ui.NodeComponent
-                        }
-                        
-                        if (targetNode != null) {
-                            dragStartPoint = e.point
-                            
-                            // Update selection based on shift key
-                            if (!e.isShiftDown && !selectedNodes.contains(targetNode)) {
-                                clearSelection()
-                            }
-                            
-                            // Add to selection
-                            if (!selectedNodes.contains(targetNode)) {
-                                selectedNodes.add(targetNode)
-                                targetNode.isSelected = true
-                                targetNode.repaint()
-                            }
-                            
-                            // This is important - prevent child components from handling this event
-                            e.consume()
-                        }
-                    }
-                } else if (e.isPopupTrigger) {
-                    // Store point for potential context menu
-                    dragStartPoint = e.point
-                }
-            }
-
-            override fun mouseReleased(e: MouseEvent) {
-                LOG.info("Mouse released on canvas, ${e.point}, ${e.button}, clickCount: ${e.clickCount} "+
-                        "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}, connectionStartNode is null: ${connectionStartNode == null}")
-
-                if (connectionStartNode != null) {
-                    // Try to find if there's a node at the release point
-                    val comp = getComponentAt(e.point)
-                    if (comp is org.mwalker.bookmarkcanvas.ui.NodeComponent && comp != connectionStartNode) {
-                        val targetNode = comp
-                        createNewConnection(connectionStartNode!!.node, targetNode.node)
-                    }
-                    connectionStartNode = null
-                    tempConnectionEndPoint = null
-                    repaint()
-                } else if (isPanning) {
-                    isPanning = false
-                    cursor = Cursor.getDefaultCursor()
-                } else if (isDrawingSelectionBox) {
-                    isDrawingSelectionBox = false
-                    finalizeSelection()
-                    selectionStart = null
-                    selectionEnd = null
-                    repaint()
-                } else if (e.isPopupTrigger && 
-                         e.source == this@CanvasPanel && 
-                         getComponentAt(e.point) == this@CanvasPanel) {
-                    // Show context menu only if right-click without drag on canvas background
-                    if (dragStartPoint != null && 
-                       (Math.abs(e.point.x - dragStartPoint!!.x) < 5 && Math.abs(e.point.y - dragStartPoint!!.y) < 5)) {
-                        showCanvasContextMenu(e.point)
-                    }
-                }
-                
-                // Save node positions if we were dragging nodes
-                if (dragStartPoint != null && !isPanning && !isDrawingSelectionBox && selectedNodes.isNotEmpty()) {
-                    for (nodeComp in selectedNodes) {
-                        nodeComp.node.position = Point(
-                            (nodeComp.x / zoomFactor).toInt(),
-                            (nodeComp.y / zoomFactor).toInt()
-                        )
-                    }
-                    CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
-                }
-                
-                dragStartPoint = null
-            }
-            
-            override fun mouseDragged(e: MouseEvent) {
-                if (isPanning && dragStartPoint != null) {
-                    // Pan all components
-                    val dx = e.x - dragStartPoint!!.x
-                    val dy = e.y - dragStartPoint!!.y
-                    
-                    for (nodeComp in nodeComponents.values) {
-                        val newX = nodeComp.x + dx
-                        val newY = nodeComp.y + dy
-                        nodeComp.setLocation(newX, newY)
-                        nodeComp.node.position = Point(
-                            (newX / zoomFactor).toInt(), 
-                            (newY / zoomFactor).toInt()
-                        )
-                    }
-                    
-                    // Update drag start point
-                    dragStartPoint = e.point
-                    repaint()
-                } else if (isDrawingSelectionBox) {
-                    // Update selection box
-                    selectionEnd = e.point
-                    repaint()
-                } else if (dragStartPoint != null && selectedNodes.isNotEmpty()) {
-                    // Make sure drag was started on a node
-                    val comp = getComponentAt(dragStartPoint!!)
-                    
-                    if ((comp is NodeComponent && selectedNodes.contains(comp)) || 
-                        (selectedNodes.isNotEmpty() && e.source is NodeComponent && selectedNodes.contains(e.source))) {
-                        // Drag all selected nodes
-                        val dx = e.x - dragStartPoint!!.x
-                        val dy = e.y - dragStartPoint!!.y
-                        
-                        for (nodeComp in selectedNodes) {
-                            var newX = nodeComp.x + dx
-                            var newY = nodeComp.y + dy
-                            
-                            // Apply snap-to-grid if enabled
-                            if (snapToGrid) {
-                                val gridSize = (GRID_SIZE * zoomFactor).toInt()
-                                newX = (newX / gridSize) * gridSize
-                                newY = (newY / gridSize) * gridSize
-                            }
-                            
-                            nodeComp.setLocation(newX, newY)
-                        }
-                        
-                        // Update drag start point
-                        dragStartPoint = e.point
-                        repaint()
-                        
-                        // Consume the event to prevent child components from handling it
-                        e.consume()
-                    }
-                } else if (connectionStartNode != null) {
-                    tempConnectionEndPoint = e.point
-                    repaint()
-                }
-            }
-            
-            override fun mouseMoved(e: MouseEvent) {
-                // Change cursor based on modifier key
-                if (isModifierKeyDown(e) && e.source == this@CanvasPanel) {
-                    cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
-                } else {
-                    cursor = Cursor.getDefaultCursor()
-                }
-            }
-        }
-        
-        // Mouse wheel listener for zooming
-        val mouseWheelListener = MouseWheelListener { e ->
-            if (isModifierKeyDown(e)) {
-                // Pinch zoom - increment/decrement based on wheel direction
-                if (e.wheelRotation < 0) {
-                    // Zoom in
-                    zoomIn()
-                } else {
-                    // Zoom out
-                    zoomOut()
-                }
-            }
-        }
-
-        addMouseListener(mouseAdapter)
-        addMouseMotionListener(mouseAdapter)
-        addMouseWheelListener(mouseWheelListener)
-        
-        // Key listener for keyboard shortcuts
-        addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) {
-                when (e.keyCode) {
-                    KeyEvent.VK_ESCAPE -> {
-                        // Clear selection
-                        clearSelection()
-                        repaint()
-                    }
-                    KeyEvent.VK_DELETE -> {
-                        // Delete selected nodes
-                        if (selectedNodes.isNotEmpty()) {
-                            for (nodeComp in selectedNodes) {
-                                canvasState.removeNode(nodeComp.node.id)
-                                remove(nodeComp)
-                                nodeComponents.remove(nodeComp.node.id)
-                            }
-                            selectedNodes.clear()
-                            CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
-                            repaint()
-                        }
-                    }
-                }
-            }
-        })
-        
-        // Make the panel focusable to receive key events
-        isFocusable = true
+    fun clearSelection() {
+        selectionManager.clearSelection()
     }
     
-    private fun clearSelection() {
-        for (nodeComp in selectedNodes) {
-            nodeComp.isSelected = false
-            nodeComp.repaint()
-        }
-        selectedNodes.clear()
+    fun finalizeSelection() {
+        selectionManager.finalizeSelection()
     }
     
-    private fun finalizeSelection() {
-        if (selectionStart == null || selectionEnd == null) return
-        
-        val rect = getSelectionRectangle()
-        
-        // Select all nodes that intersect with the selection rectangle
-        for (nodeComp in nodeComponents.values) {
-            val nodeBounds = Rectangle(nodeComp.x, nodeComp.y, nodeComp.width, nodeComp.height)
-            
-            if (rect.intersects(nodeBounds)) {
-                selectedNodes.add(nodeComp)
-                nodeComp.isSelected = true
-                nodeComp.repaint()
-            }
-        }
+    fun getSelectionRectangle(): Rectangle {
+        return selectionManager.getSelectionRectangle()
+    }
+
+    fun createNewConnection(source: BookmarkNode, target: BookmarkNode) {
+        connectionManager.createNewConnection(source, target)
+    }
+
+    fun showCanvasContextMenu(point: Point) {
+        contextMenuManager.showCanvasContextMenu(point)
     }
     
-    private fun getSelectionRectangle(): Rectangle {
-        val x = Math.min(selectionStart!!.x, selectionEnd!!.x)
-        val y = Math.min(selectionStart!!.y, selectionEnd!!.y)
-        val width = Math.abs(selectionEnd!!.x - selectionStart!!.x)
-        val height = Math.abs(selectionEnd!!.y - selectionStart!!.y)
-        
-        return Rectangle(x, y, width, height)
+    fun showAddBookmarkDialog(point: Point) {
+        contextMenuManager.showAddBookmarkDialog(point)
     }
 
-    private fun createNewConnection(source: BookmarkNode, target: BookmarkNode) {
-        val connection = NodeConnection(source.id, target.id)
-        canvasState.addConnection(connection)
-        CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
-        repaint()
-    }
-
-    private fun showCanvasContextMenu(point: Point) {
-        val menu = JPopupMenu()
-        
-        val addBookmarkItem = JMenuItem("Add Bookmark")
-        addBookmarkItem.addActionListener {
-            showAddBookmarkDialog(point)
-        }
-        menu.add(addBookmarkItem)
-        
-        val addAllBookmarksItem = JMenuItem("Add All Bookmarks")
-        addAllBookmarksItem.addActionListener {
-            refreshBookmarks()
-        }
-        menu.add(addAllBookmarksItem)
-
-        val clearCanvasItem = JMenuItem("Clear Canvas")
-        clearCanvasItem.addActionListener {
-            clearCanvas()
-        }
-        menu.add(clearCanvasItem)
-
-        menu.show(this, point.x, point.y)
-    }
-    
-    private fun showAddBookmarkDialog(point: Point) {
-        // Get all available bookmarks
-        val allBookmarks = org.mwalker.bookmarkcanvas.services.BookmarkService.getAllBookmarkNodes(project)
-        
-        if (allBookmarks.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                "No bookmarks found. Create bookmarks in your editor first.",
-                "No Bookmarks",
-                JOptionPane.INFORMATION_MESSAGE
-            )
-            return
-        }
-        
-        // Create dialog for selecting a bookmark
-        val dialog = JDialog()
-        dialog.title = "Select Bookmark"
-        dialog.layout = BorderLayout()
-        dialog.isModal = true
-        
-        val bookmarkList = JList(allBookmarks.toTypedArray())
-        bookmarkList.cellRenderer = object : DefaultListCellRenderer() {
-            override fun getListCellRendererComponent(
-                list: JList<*>?,
-                value: Any?,
-                index: Int,
-                isSelected: Boolean,
-                cellHasFocus: Boolean
-            ): Component {
-                val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-                val bookmark = value as org.mwalker.bookmarkcanvas.model.BookmarkNode
-                label.text = bookmark.displayName
-                return label
-            }
-        }
-        
-        val scrollPane = JScrollPane(bookmarkList)
-        dialog.add(scrollPane, BorderLayout.CENTER)
-        
-        val buttonPanel = JPanel()
-        buttonPanel.layout = FlowLayout(FlowLayout.RIGHT)
-        val addButton = JButton("Add")
-        addButton.addActionListener {
-            val selectedBookmark = bookmarkList.selectedValue
-            if (selectedBookmark != null) {
-                // Create a copy of the bookmark with new position
-                val nodeCopy = selectedBookmark.copy(
-                    id = "bookmark_" + System.currentTimeMillis(),
-                    positionX = (point.x / zoomFactor).toInt(),
-                    positionY = (point.y / zoomFactor).toInt()
-                )
-                
-                canvasState.addNode(nodeCopy)
-                addNodeComponent(nodeCopy)
-                CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
-                repaint()
-            }
-            dialog.dispose()
-        }
-        
-        val cancelButton = JButton("Cancel")
-        cancelButton.addActionListener { dialog.dispose() }
-        
-        buttonPanel.add(addButton)
-        buttonPanel.add(cancelButton)
-        dialog.add(buttonPanel, BorderLayout.SOUTH)
-        
-        dialog.pack()
-        dialog.setSize(400, 300)
-        dialog.setLocationRelativeTo(this)
-        dialog.isVisible = true
-    }
-
-    private fun refreshBookmarks() {
-        // Fetch all bookmarks from the IDE
-        val bookmarks = org.mwalker.bookmarkcanvas.services.BookmarkService.getAllBookmarkNodes(project)
-        
-        // For each bookmark not already on canvas, add a new node
-        var added = 0
-        for (bookmark in bookmarks) {
-            // Check if this bookmark is already on the canvas
-            val existing = canvasState.nodes.values.find { 
-                it.bookmarkId == bookmark.bookmarkId 
-            }
-            
-            if (existing == null) {
-                // Find free position for new node
-                val offset = nodeComponents.size * 30
-                val newNode = bookmark.copy(
-                    id = "bookmark_" + System.currentTimeMillis(),
-                    positionX = 100 + offset,
-                    positionY = 100 + offset
-                )
-                
-                canvasState.addNode(newNode)
-                addNodeComponent(newNode)
-                added++
-            }
-        }
-        
-        if (added > 0) {
-            CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
-            repaint()
-        }
+    fun refreshBookmarks() {
+        contextMenuManager.refreshBookmarks()
     }
 
     fun clearCanvas() {
@@ -542,58 +154,19 @@ class CanvasPanel(val project: Project) : JPanel() {
     }
 
     fun zoomIn() {
-        _zoomFactor *= 1.2
-        updateCanvasSize()
-        repaint()
+        zoomManager.zoomIn()
     }
 
     fun zoomOut() {
-        _zoomFactor /= 1.2
-        if (_zoomFactor < 0.1) _zoomFactor = 0.1
-        updateCanvasSize()
-        repaint()
+        zoomManager.zoomOut()
     }
 
-    // go to top left node. Do this by finding the min x of all nodes and the min y of all nodes
-    // then update all nodes such that the min x and y are 0. So each node needs to move each coordinate by its distance from the old min
+    fun updateCanvasSize() {
+        zoomManager.updateCanvasSize()
+    }
+
     fun goToTopLeftNode() {
-
-        // Find the top-left most node (minimum x and y position)
-        if (canvasState.nodes.isEmpty()) return
-
-        val minX = canvasState.nodes.values.minOfOrNull {
-            it.positionX
-        } ?: return
-
-        val minY = canvasState.nodes.values.minOfOrNull {
-            it.positionY
-        } ?: return
-
-        for (nodeComp in nodeComponents.values) {
-            val x = nodeComp.node.positionX - minX
-            val y = nodeComp.node.positionY - minY
-            nodeComp.setLocation(x, y)
-            nodeComp.node.positionX = x
-            nodeComp.node.positionY = y
-        }
-
-        // then reset the zoom factor and scroll
-        _zoomFactor = 0.8
-        updateCanvasSize()
-        repaint()
-        // Calculate buffer space (padding from the edge of the viewport)
-        val bufferSpace = 20
-
-        // Scroll to position that places the top-left node in view with some buffer space
-        val scrollPane = parent?.parent as? JScrollPane
-
-        scrollPane?.viewport?.viewPosition = Point( 0, 0 )
-        LOG.info("scrollpane is $scrollPane")
-
-        // Reset zoom to a comfortable level
-        _zoomFactor = 0.8
-        updateCanvasSize()
-        repaint()
+        zoomManager.goToTopLeftNode()
     }
 
     // Property accessors 
@@ -634,30 +207,6 @@ class CanvasPanel(val project: Project) : JPanel() {
         repaint()
     }
 
-    private fun updateCanvasSize() {
-        // Keep canvas size large regardless of zoom to allow unlimited panning
-        preferredSize = Dimension(5000, 5000)
-
-        // Update the scale for all components
-        for (nodeComp in nodeComponents.values) {
-            val originalPos = nodeComp.node.position
-            val scaledX = (originalPos.x * zoomFactor).toInt()
-            val scaledY = (originalPos.y * zoomFactor).toInt()
-            nodeComp.setLocation(scaledX, scaledY)
-
-            // Scale the size too
-            val prefSize = nodeComp.preferredSize
-            val scaledWidth = (prefSize.width * zoomFactor).toInt()
-            val scaledHeight = (prefSize.height * zoomFactor).toInt()
-            nodeComp.setSize(scaledWidth, scaledHeight)
-            
-            // Update font sizes based on zoom factor
-            nodeComp.updateFontSizes(zoomFactor)
-        }
-
-        revalidate()
-    }
-
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val g2d = g.create() as Graphics2D
@@ -667,22 +216,7 @@ class CanvasPanel(val project: Project) : JPanel() {
 
         // Draw grid if enabled
         if (showGrid) {
-            g2d.color = GRID_COLOR
-            val scaledGridSize = (GRID_SIZE * zoomFactor).toInt()
-
-            // Draw vertical lines
-            var x = 0
-            while (x < width) {
-                g2d.drawLine(x, 0, x, height)
-                x += scaledGridSize
-            }
-
-            // Draw horizontal lines
-            var y = 0
-            while (y < height) {
-                g2d.drawLine(0, y, width, y)
-                y += scaledGridSize
-            }
+            drawGrid(g2d)
         }
 
         // Draw connections between nodes
@@ -691,27 +225,35 @@ class CanvasPanel(val project: Project) : JPanel() {
             val target = nodeComponents[connection.targetNodeId]
 
             if (source != null && target != null) {
-                drawConnection(g2d, source, target, connection.color)
+                connectionManager.drawConnection(g2d, source, target, connection.color)
             }
         }
 
         // Draw temporary connection if creating one
-        connectionStartNode?.let { startNode ->
-            tempConnectionEndPoint?.let { endPoint ->
-                val startPoint = Point(
-                    startNode.x + startNode.width / 2,
-                    startNode.y + startNode.height / 2
-                )
-                g2d.color = JBColor.GRAY
-                g2d.stroke = BasicStroke(
-                    2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
-                    0f, floatArrayOf(5f), 0f
-                )
-                g2d.drawLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y)
-            }
+        if (connectionStartNode != null && tempConnectionEndPoint != null) {
+            connectionManager.drawTemporaryConnection(g2d, connectionStartNode!!, tempConnectionEndPoint!!)
         }
 
         g2d.dispose()
+    }
+    
+    private fun drawGrid(g2d: Graphics2D) {
+        g2d.color = GRID_COLOR
+        val scaledGridSize = (GRID_SIZE * zoomFactor).toInt()
+
+        // Draw vertical lines
+        var x = 0
+        while (x < width) {
+            g2d.drawLine(x, 0, x, height)
+            x += scaledGridSize
+        }
+
+        // Draw horizontal lines
+        var y = 0
+        while (y < height) {
+            g2d.drawLine(0, y, width, y)
+            y += scaledGridSize
+        }
     }
     
     // Paint the selection box in the glass pane layer to ensure it's on top
@@ -720,68 +262,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         
         // After painting everything else, draw the selection box on top if active
         if (isDrawingSelectionBox && selectionStart != null && selectionEnd != null) {
-            val g2d = g.create() as Graphics2D
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            
-            val rect = getSelectionRectangle()
-            
-            // Fill with semi-transparent color
-            g2d.color = SELECTION_BOX_COLOR
-            g2d.fill(rect)
-            
-            // Draw border
-            g2d.color = SELECTION_BOX_BORDER_COLOR
-            g2d.stroke = BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g2d.draw(rect)
-            
-            g2d.dispose()
+            selectionManager.drawSelectionBox(g)
         }
-    }
-
-    private fun drawConnection(g2d: Graphics2D, source: org.mwalker.bookmarkcanvas.ui.NodeComponent, target: org.mwalker.bookmarkcanvas.ui.NodeComponent, color: Color) {
-        // Calculate center points
-        val startPoint = Point(
-            source.x + source.width / 2,
-            source.y + source.height / 2
-        )
-
-        val endPoint = Point(
-            target.x + target.width / 2,
-            target.y + target.height / 2
-        )
-
-        // Draw the line
-        g2d.color = color
-        g2d.stroke = BasicStroke(2.0f)
-        g2d.drawLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y)
-
-        // Draw the arrowhead
-        drawArrowHead(g2d, startPoint, endPoint)
-    }
-
-    private fun drawArrowHead(g2d: Graphics2D, start: Point, end: Point) {
-        // Calculate arrowhead
-        val dx = end.x - start.x
-        val dy = end.y - start.y
-        val length = Math.sqrt((dx * dx + dy * dy).toDouble())
-        val dirX = dx / length
-        val dirY = dy / length
-
-        val arrowSize = 10.0
-        val arrowAngle = Math.PI / 6 // 30 degrees
-
-        val p1 = Point2D.Double(
-            end.x - arrowSize * (dirX * Math.cos(arrowAngle) + dirY * Math.sin(arrowAngle)),
-            end.y - arrowSize * (dirY * Math.cos(arrowAngle) - dirX * Math.sin(arrowAngle))
-        )
-
-        val p2 = Point2D.Double(
-            end.x - arrowSize * (dirX * Math.cos(arrowAngle) - dirY * Math.sin(arrowAngle)),
-            end.y - arrowSize * (dirY * Math.cos(arrowAngle) + dirX * Math.sin(arrowAngle))
-        )
-
-        // Draw arrowhead
-        g2d.draw(Line2D.Double(end.x.toDouble(), end.y.toDouble(), p1.x, p1.y))
-        g2d.draw(Line2D.Double(end.x.toDouble(), end.y.toDouble(), p2.x, p2.y))
     }
 }
