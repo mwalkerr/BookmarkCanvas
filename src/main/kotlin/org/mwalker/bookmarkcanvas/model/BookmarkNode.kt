@@ -63,17 +63,17 @@ data class BookmarkNode(
         }
     }
 
-    fun getCodeSnippet(project: Project?): String {
-        if (project == null) return "No project"
+    fun getCodeSnippet(project: Project?): String = kotlin.runCatching {
+        if (project == null) return@runCatching "No project"
 
         val file = project.baseDir.findFileByRelativePath(filePath)
-            ?: return "File not found"
+            ?: return@runCatching "File not found"
 
         val psiFile = PsiManager.getInstance(project).findFile(file)
-            ?: return "Cannot read file"
+            ?: return@runCatching "Cannot read file"
 
         val document = psiFile.viewProvider.document
-            ?: return "Cannot read document"
+            ?: return@runCatching "Cannot read document"
 
         val startLine = maxOf(0, lineNumber0Based - contextLinesBefore)
         val endLine = minOf(document.lineCount - 1, lineNumber0Based + contextLinesAfter)
@@ -92,8 +92,11 @@ data class BookmarkNode(
         }
         
         // Normalize indentation to start at 0
-        return normalizeIndentation(snippetText)
-    }
+        return@runCatching normalizeIndentation(snippetText)
+    }.onFailure {
+        LOG.error("Error getting code snippet", it)
+        "Error getting code snippet: ${it.message}"
+    }.getOrNull() ?: ""
     
     /**
      * Normalizes the indentation of a code snippet so the minimum indentation level is 0
