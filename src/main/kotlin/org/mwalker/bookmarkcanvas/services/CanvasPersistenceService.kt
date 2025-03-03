@@ -14,8 +14,9 @@ import com.intellij.util.xmlb.annotations.Transient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.swing.Swing
+import kotlinx.coroutines.withContext
 
 /**
  * A state class specifically designed for serialization.
@@ -220,7 +221,7 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
 
     /**
      * Asynchronously saves the canvas state to persistent storage.
-     * This version uses coroutines to avoid blocking the UI thread.
+     * Uses Kotlin coroutines from IntelliJ's bundled libraries to avoid blocking the UI thread.
      */
     fun saveCanvasState(project: Project, canvasState: CanvasState) {
         // Store in memory immediately (this is fast)
@@ -231,7 +232,7 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
         saveJobs[projectId]?.cancel()
         
         // Start a new background job to save the state
-        saveJobs[projectId] = coroutineScope.launch {
+        val job = coroutineScope.launch {
             try {
                 // Create a snapshot of the current state to work with
                 val stateCopy = CanvasState()
@@ -249,7 +250,7 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                     stateCopy.addConnection(connection.copy())
                 }
                 
-                // Convert to serializable format (now on IO thread)
+                // Convert to serializable format on background thread
                 val persistentState = PersistentCanvasState()
                 persistentState.projectId = projectId
                 
@@ -272,11 +273,13 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                 persistentState.scrollPositionX = stateCopy.scrollPositionX
                 persistentState.scrollPositionY = stateCopy.scrollPositionY
                 
-                // Switch back to UI thread to update the state safely
-                launch(Dispatchers.Swing) {
-                    // Update serialized state
-                    state.projectStates.put(projectId, persistentState)
-                    LOG.info("Canvas state for project ${project.name} saved successfully")
+                // Switch to UI thread to update the state safely
+                withContext(Dispatchers.Main) {
+                    if (!project.isDisposed) {
+                        // Update serialized state
+                        state.projectStates.put(projectId, persistentState)
+                        LOG.info("Canvas state for project ${project.name} saved successfully")
+                    }
                 }
             } catch (e: Exception) {
                 LOG.error("Error saving canvas state: ${e.message}", e)
@@ -285,5 +288,8 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                 saveJobs.remove(projectId)
             }
         }
+        
+        // Store job for cancellation if needed
+        saveJobs[projectId] = job
     }
 }

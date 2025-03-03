@@ -3,7 +3,6 @@ package org.mwalker.bookmarkcanvas.ui
 import com.intellij.openapi.diagnostic.Logger
 import java.awt.Dimension
 import java.awt.Point
-import javax.swing.JScrollPane
 
 /**
  * Manages zoom and navigation on the canvas
@@ -58,16 +57,10 @@ class CanvasZoomManager(
     }
     
     /**
-     * Saves the current view state (zoom, scroll) to the canvas state
+     * Saves the current view state (zoom) to the canvas state
      */
     private fun saveViewState() {
-        // Get scroll position from parent viewport if available
-        val scrollPane = canvasPanel.parent?.parent as? JScrollPane
-        scrollPane?.viewport?.let { viewport ->
-            val viewPosition = viewport.viewPosition
-            canvasPanel.canvasState.scrollPositionX = viewPosition.x
-            canvasPanel.canvasState.scrollPositionY = viewPosition.y
-        }
+        // Since we no longer use scrollbars, we just need to save the zoom factor
         
         // Save state using persistence service
         org.mwalker.bookmarkcanvas.services.CanvasPersistenceService.getInstance()
@@ -78,8 +71,10 @@ class CanvasZoomManager(
      * Updates the canvas size and scales all components
      */
     fun updateCanvasSize() {
-        // Keep canvas size large regardless of zoom to allow unlimited panning
-        canvasPanel.preferredSize = Dimension(5000, 5000)
+        // Adjust size to fit parent container
+        canvasPanel.parent?.let { parent ->
+            canvasPanel.preferredSize = parent.size
+        }
 
         // Update the scale for all components
         for (nodeComp in nodeComponents.values) {
@@ -133,20 +128,12 @@ class CanvasZoomManager(
             nodeComp.node.positionY = y
         }
 
-        // Then reset the zoom factor and scroll
+        // Then reset the zoom factor
         canvasPanel._zoomFactor = 0.8
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
         canvasPanel.invalidateGridCache() // Force grid cache update
         canvasPanel.repaint()
-        
-        // Scroll to position that places the top-left node in view with some buffer space
-        val scrollPane = canvasPanel.parent?.parent as? JScrollPane
-        scrollPane?.viewport?.viewPosition = Point(0, 0)
-        
-        // Update scroll position in state
-        canvasPanel.canvasState.scrollPositionX = 0
-        canvasPanel.canvasState.scrollPositionY = 0
         
         // Save the state
         org.mwalker.bookmarkcanvas.services.CanvasPersistenceService.getInstance()

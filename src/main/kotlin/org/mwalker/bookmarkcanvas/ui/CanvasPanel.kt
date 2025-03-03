@@ -88,15 +88,9 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Set up the canvas
         initializeNodes()
         eventHandler.setupEventListeners()
-
-        // Initial size - large to allow unlimited panning
-        preferredSize = Dimension(5000, 5000)
         
-        // Restore scroll position after initialization
-        SwingUtilities.invokeLater {
-            val scrollPane = parent?.parent as? JScrollPane
-            scrollPane?.viewport?.viewPosition = Point(canvasState.scrollPositionX, canvasState.scrollPositionY)
-        }
+        // Don't need a fixed size since we're not using scrollbars anymore
+        // The canvas will be sized to fit the parent container
     }
 
     private fun initializeNodes() {
