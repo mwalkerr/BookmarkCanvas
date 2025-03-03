@@ -21,12 +21,28 @@ class CanvasNodeManager(
         val nodeComponent = NodeComponent(node, project)
         canvasPanel.add(nodeComponent)
 
-        // Stagger new nodes to prevent overlap
+        // For new nodes, place at 0,0 or shift existing nodes if needed
         if (node.positionX == 100 && node.positionY == 100) {
-            // Find a free position
-            val offset = canvasPanel.nodeComponents.size * 30
-            node.positionX = 100 + offset
-            node.positionY = 100 + offset
+            // Check if any node exists at 0,0
+            val isOriginOccupied = canvasPanel.nodeComponents.values.any { 
+                val posX = (it.node.positionX / canvasPanel.zoomFactor).toInt()
+                val posY = (it.node.positionY / canvasPanel.zoomFactor).toInt()
+                posX == 0 && posY == 0 
+            }
+            
+            if (isOriginOccupied) {
+                // Shift all existing nodes down to make space
+                for (existingNode in canvasPanel.nodeComponents.values) {
+                    existingNode.node.positionY += 100
+                    val newY = (existingNode.node.positionY * canvasPanel.zoomFactor).toInt()
+                    val newX = (existingNode.node.positionX * canvasPanel.zoomFactor).toInt()
+                    existingNode.setLocation(newX, newY)
+                }
+            }
+            
+            // Place new node at 0,0
+            node.positionX = 0
+            node.positionY = 0
         }
         
         // Apply zoom and snap if necessary
@@ -52,5 +68,8 @@ class CanvasNodeManager(
         nodeComponent.updateFontSizes(canvasPanel.zoomFactor)
         
         canvasPanel.nodeComponents[node.id] = nodeComponent
+        
+        // Ensure canvas state is saved after adding node
+        canvasPanel.saveState()
     }
 }

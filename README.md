@@ -52,7 +52,9 @@ See [CLAUDE.md](CLAUDE.md) for development guidelines.
 ### TODO
 - syntax highlighting for code in the node
 - fix issue with font size for snippet when context changed
+- fix undo/redo
 - auto sizing
+- record demo
 
 ## License
 
