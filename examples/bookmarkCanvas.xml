@@ -1,0 +1,371 @@
+<application>
+  <component name="BookmarkCanvasPersistence">
+    <option name="projectStates">
+      <map>
+        <entry key="f86b63f">
+          <value>
+            <PersistentCanvasState>
+              <option name="connections">
+                <list>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="6d6c68de-69a0-4ea3-8d78-4cef3a98e701" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="1ee2b583-eeb8-47df-b21f-9475a158d2be" />
+                    <option name="targetNodeId" value="9573296e-324b-4fc0-8336-6a97b5308e18" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="b3dd0bd9-5c4d-4013-a327-63b9852dd54e" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="253aa1fe-49b9-4d4d-8a18-c80a141bb233" />
+                    <option name="targetNodeId" value="f8291cde-7e63-449e-a497-4a223feb7289" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="b6a26a58-4b46-4703-8c80-7881c6769f2b" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="ea58f669-ddc4-434a-90ec-c2ebe111634f" />
+                    <option name="targetNodeId" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="a813881c-1d8b-4c8c-8ea4-9377677a5015" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                    <option name="targetNodeId" value="6a00d4bd-ed43-4dfc-97a6-063b1ac30b64" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="b7243b4b-a93b-4cad-8855-9450ba68e353" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                    <option name="targetNodeId" value="89a88dc4-4625-4a82-842e-bd0e25da1277" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="4a2044f8-f062-4dc8-b5a8-acb236982b52" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                    <option name="targetNodeId" value="6e611a85-1d15-4a8b-b8d5-4ecd0b6bb896" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="645b81dc-7d35-4546-a1a7-652851ae09b8" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                    <option name="targetNodeId" value="5a5c988c-6cb3-4de5-b6ed-f033edfe54b9" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="c698ec44-81df-4908-a609-5d507c2cfdf5" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="75a6203a-6a54-4114-b920-0cc7b116448f" />
+                    <option name="targetNodeId" value="57bc34be-dd0c-4086-b2d5-de2c1116b86d" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="0aae624f-7931-4ea2-a48b-fc69728146a5" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="75a6203a-6a54-4114-b920-0cc7b116448f" />
+                    <option name="targetNodeId" value="d47a5023-3ec4-4719-b66a-b06aba12c737" />
+                  </SerializableConnection>
+                  <SerializableConnection>
+                    <option name="colorRGB" value="-8355712" />
+                    <option name="id" value="aea643b5-b543-45cf-aec0-8aeaef9f46c7" />
+                    <option name="label" />
+                    <option name="sourceNodeId" value="717a1207-1285-4c68-9904-6a1d66d37f4e" />
+                    <option name="targetNodeId" value="eb82a919-428c-4ffb-bebc-3b70e3bf6114" />
+                  </SerializableConnection>
+                </list>
+              </option>
+              <option name="nodeMap">
+                <map>
+                  <entry key="1ee2b583-eeb8-47df-b21f-9475a158d2be">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740969494409" />
+                        <option name="contextLinesBefore" value="0" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/services/CanvasPersistenceService.kt" />
+                        <option name="height" value="124" />
+                        <option name="id" value="1ee2b583-eeb8-47df-b21f-9475a158d2be" />
+                        <option name="lineContent" value="        fun toBookmarkNode(serialNode: SerializableNode): BookmarkNode {" />
+                        <option name="lineNumber" value="73" />
+                        <option name="positionX" value="737" />
+                        <option name="positionY" value="298" />
+                        <option name="showCodeSnippet" value="true" />
+                        <option name="width" value="568" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="253aa1fe-49b9-4d4d-8a18-c80a141bb233">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="file_bookmark_e4c1962f-911d-496b-a110-d11e1ea0eb49" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeComponent.kt" />
+                        <option name="height" value="39" />
+                        <option name="id" value="253aa1fe-49b9-4d4d-8a18-c80a141bb233" />
+                        <option name="lineContent" />
+                        <option name="positionX" value="289" />
+                        <option name="positionY" value="73" />
+                        <option name="width" value="148" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="57bc34be-dd0c-4086-b2d5-de2c1116b86d">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740972339129" />
+                        <option name="displayName" value="zoom out" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/CanvasPanel.kt" />
+                        <option name="height" value="40" />
+                        <option name="id" value="57bc34be-dd0c-4086-b2d5-de2c1116b86d" />
+                        <option name="lineContent" value="    fun zoomOut() {" />
+                        <option name="lineNumber" value="170" />
+                        <option name="positionX" value="871" />
+                        <option name="positionY" value="-284" />
+                        <option name="width" value="120" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="5a5c988c-6cb3-4de5-b6ed-f033edfe54b9">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740971132736" />
+                        <option name="displayName" value="NodeComponent handleConnectionDrag" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="id" value="5a5c988c-6cb3-4de5-b6ed-f033edfe54b9" />
+                        <option name="lineContent" value="    private fun handleConnectionDrag(e: MouseEvent) {" />
+                        <option name="lineNumber" value="280" />
+                        <option name="positionX" value="874" />
+                        <option name="positionY" value="-127" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="6a00d4bd-ed43-4dfc-97a6-063b1ac30b64">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740970653978" />
+                        <option name="displayName" value="NodeComponent mouseReleased" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="height" value="39" />
+                        <option name="id" value="6a00d4bd-ed43-4dfc-97a6-063b1ac30b64" />
+                        <option name="lineContent" value="            override fun mouseReleased(e: MouseEvent) {" />
+                        <option name="lineNumber" value="115" />
+                        <option name="positionX" value="1144" />
+                        <option name="positionY" value="127" />
+                        <option name="width" value="224" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="6e611a85-1d15-4a8b-b8d5-4ecd0b6bb896">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740971098908" />
+                        <option name="displayName" value="NodeComponent handleResizing" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="id" value="6e611a85-1d15-4a8b-b8d5-4ecd0b6bb896" />
+                        <option name="lineContent" value="    private fun handleResizing(e: MouseEvent) {" />
+                        <option name="lineNumber" value="240" />
+                        <option name="positionX" value="1104" />
+                        <option name="positionY" value="-3" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="717a1207-1285-4c68-9904-6a1d66d37f4e">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="file_bookmark_8e3a501d-d7b9-456d-a0a8-d644954a74df" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/model/BookmarkNode.kt" />
+                        <option name="height" value="40" />
+                        <option name="id" value="717a1207-1285-4c68-9904-6a1d66d37f4e" />
+                        <option name="lineContent" />
+                        <option name="positionX" value="1339" />
+                        <option name="positionY" value="-488" />
+                        <option name="width" value="155" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="75a6203a-6a54-4114-b920-0cc7b116448f">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="file_bookmark_694d567a-098f-4a2c-8be4-5db59330ee1b" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/CanvasPanel.kt" />
+                        <option name="height" value="40" />
+                        <option name="id" value="75a6203a-6a54-4114-b920-0cc7b116448f" />
+                        <option name="lineContent" />
+                        <option name="positionX" value="624" />
+                        <option name="positionY" value="-288" />
+                        <option name="width" value="126" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="77c017ca-8903-4e17-99c1-fe31aaf72730">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740970566440" />
+                        <option name="displayName" value="README TODO" />
+                        <option name="filePath" value="README.md" />
+                        <option name="height" value="40" />
+                        <option name="id" value="77c017ca-8903-4e17-99c1-fe31aaf72730" />
+                        <option name="lineContent" value="### TODO" />
+                        <option name="lineNumber" value="51" />
+                        <option name="positionX" value="254" />
+                        <option name="positionY" value="589" />
+                        <option name="width" value="120" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="8356ae83-0a34-4fb2-be4a-2bf645cd154b">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="file_bookmark_567e22e7-9cf4-48c8-a1f5-e8d6fcea1a5b" />
+                        <option name="filePath" value="build.gradle.kts" />
+                        <option name="height" value="40" />
+                        <option name="id" value="8356ae83-0a34-4fb2-be4a-2bf645cd154b" />
+                        <option name="lineContent" />
+                        <option name="positionX" value="254" />
+                        <option name="positionY" value="501" />
+                        <option name="width" value="125" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="87f75683-7949-4f90-a9c1-e1bea1239863">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740970722567" />
+                        <option name="displayName" value="NodeComponent mouseDragged" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="id" value="87f75683-7949-4f90-a9c1-e1bea1239863" />
+                        <option name="lineContent" value="            override fun mouseDragged(e: MouseEvent) {" />
+                        <option name="lineNumber" value="167" />
+                        <option name="positionX" value="897" />
+                        <option name="positionY" value="36" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="89a88dc4-4625-4a82-842e-bd0e25da1277">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740971067035" />
+                        <option name="displayName" value="NodeComponent handleDragging" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="id" value="89a88dc4-4625-4a82-842e-bd0e25da1277" />
+                        <option name="lineContent" value="    private fun handleDragging(e: MouseEvent) {" />
+                        <option name="lineNumber" value="214" />
+                        <option name="positionX" value="744" />
+                        <option name="positionY" value="-33" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="9573296e-324b-4fc0-8336-6a97b5308e18">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740969496537" />
+                        <option name="contextLinesBefore" value="0" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/services/CanvasPersistenceService.kt" />
+                        <option name="height" value="165" />
+                        <option name="id" value="9573296e-324b-4fc0-8336-6a97b5308e18" />
+                        <option name="lineContent" value="        fun fromBookmarkNode(node: BookmarkNode): SerializableNode {" />
+                        <option name="lineNumber" value="53" />
+                        <option name="positionX" value="714" />
+                        <option name="positionY" value="468" />
+                        <option name="showCodeSnippet" value="true" />
+                        <option name="width" value="528" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="d47a5023-3ec4-4719-b66a-b06aba12c737">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740972447830" />
+                        <option name="displayName" value="zoom in" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/CanvasZoomManager.kt" />
+                        <option name="height" value="39" />
+                        <option name="id" value="d47a5023-3ec4-4719-b66a-b06aba12c737" />
+                        <option name="lineContent" value="    fun zoomIn() {" />
+                        <option name="lineNumber" value="19" />
+                        <option name="positionX" value="839" />
+                        <option name="positionY" value="-368" />
+                        <option name="width" value="119" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="ea58f669-ddc4-434a-90ec-c2ebe111634f">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740970098828" />
+                        <option name="displayName" value="NodeComponent mousePressed" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="height" value="40" />
+                        <option name="id" value="ea58f669-ddc4-434a-90ec-c2ebe111634f" />
+                        <option name="lineContent" value="            override fun mousePressed(e: MouseEvent) {" />
+                        <option name="lineNumber" value="77" />
+                        <option name="positionX" value="624" />
+                        <option name="positionY" value="127" />
+                        <option name="width" value="236" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="eb82a919-428c-4ffb-bebc-3b70e3bf6114">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740973163481" />
+                        <option name="contextLinesAfter" value="7" />
+                        <option name="contextLinesBefore" value="0" />
+                        <option name="displayName" value="getDisplayText" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/model/BookmarkNode.kt" />
+                        <option name="height" value="248" />
+                        <option name="id" value="eb82a919-428c-4ffb-bebc-3b70e3bf6114" />
+                        <option name="lineContent" value="    fun getDisplayText(): String {" />
+                        <option name="lineNumber" value="54" />
+                        <option name="positionX" value="1376" />
+                        <option name="positionY" value="-389" />
+                        <option name="showCodeSnippet" value="true" />
+                        <option name="width" value="566" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="f8291cde-7e63-449e-a497-4a223feb7289">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="bookmark_1740969956929" />
+                        <option name="displayName" value="NodeComponent keyPressed" />
+                        <option name="filePath" value="src/main/kotlin/org/mwalker/bookmarkcanvas/ui/NodeEventHandler.kt" />
+                        <option name="height" value="40" />
+                        <option name="id" value="f8291cde-7e63-449e-a497-4a223feb7289" />
+                        <option name="lineContent" value="            override fun keyPressed(e: KeyEvent) {" />
+                        <option name="lineNumber" value="48" />
+                        <option name="positionX" value="372" />
+                        <option name="positionY" value="183" />
+                        <option name="width" value="200" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                  <entry key="fa28b6bc-6db9-4df0-a49f-cbc6c10ac341">
+                    <value>
+                      <SerializableNode>
+                        <option name="bookmarkId" value="file_bookmark_af168468-5d58-4e00-8793-e4ce74a847d4" />
+                        <option name="filePath" value="README.md" />
+                        <option name="height" value="40" />
+                        <option name="id" value="fa28b6bc-6db9-4df0-a49f-cbc6c10ac341" />
+                        <option name="lineContent" />
+                        <option name="positionX" value="254" />
+                        <option name="positionY" value="542" />
+                        <option name="width" value="120" />
+                      </SerializableNode>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+              <option name="projectId" value="f86b63f" />
+              <option name="showGrid" value="true" />
+              <option name="snapToGrid" value="true" />
+              <option name="zoomFactor" value="0.8" />
+            </PersistentCanvasState>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</application>
