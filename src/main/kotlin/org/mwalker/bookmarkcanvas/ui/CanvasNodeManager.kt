@@ -49,14 +49,8 @@ class CanvasNodeManager(
         var x = (node.positionX * canvasPanel.zoomFactor).toInt()
         var y = (node.positionY * canvasPanel.zoomFactor).toInt()
         
-        // Apply snapping if enabled
-        if (canvasPanel.snapToGrid) {
-            val gridSize = (canvasPanel.GRID_SIZE * canvasPanel.zoomFactor).toInt()
-            x = (x / gridSize) * gridSize
-            y = (y / gridSize) * gridSize
-            node.positionX = (x / canvasPanel.zoomFactor).toInt()
-            node.positionY = (y / canvasPanel.zoomFactor).toInt()
-        }
+        // We don't snap when initially adding nodes, only when dragging them
+        // This ensures toggling snap doesn't change node positions
 
         val prefSize = nodeComponent.preferredSize
         val scaledWidth = (prefSize.width * canvasPanel.zoomFactor).toInt()

@@ -4,6 +4,8 @@ This plugin provides a canvas for organizing bookmarks in IntelliJ IDEs such as 
 The goal is to make it easy to create a visual representation both of bookmarks and of the relationships between them.
 The canvas should make it easy to quickly jump to a bookmarked location
 
+This was written 99% by Claude 3.7 through [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) 
+
 ## Features
 
 - Add a bookmark to the canvas from the "Bookmarks" tool window

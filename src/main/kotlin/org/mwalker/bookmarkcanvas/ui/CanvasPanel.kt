@@ -197,18 +197,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Persist the state
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
         
-        if (_snapToGrid) {
-            // Snap all existing nodes to grid
-            for (nodeComp in nodeComponents.values) {
-                val location = nodeComp.location
-                val x = (location.x / GRID_SIZE).toInt() * GRID_SIZE
-                val y = (location.y / GRID_SIZE).toInt() * GRID_SIZE
-                nodeComp.setLocation(x, y)
-                val node = nodeComp.node
-                node.positionX = (x / zoomFactor).toInt()
-                node.positionY = (y / zoomFactor).toInt()
-            }
-        }
+        // No longer snap existing nodes when toggling - only affect future drags
         repaint()
     }
     

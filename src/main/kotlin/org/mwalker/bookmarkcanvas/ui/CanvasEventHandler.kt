@@ -228,22 +228,24 @@ class CanvasEventHandler(
         
         if ((comp is NodeComponent && canvasPanel.selectedNodes.contains(comp)) || 
             (canvasPanel.selectedNodes.isNotEmpty() && e.source is NodeComponent && canvasPanel.selectedNodes.contains(e.source))) {
-            // Drag all selected nodes
+            // Calculate base movement
             val dx = e.x - canvasPanel.dragStartPoint!!.x
             val dy = e.y - canvasPanel.dragStartPoint!!.y
             
-            for (nodeComp in canvasPanel.selectedNodes) {
-                var newX = nodeComp.x + dx
-                var newY = nodeComp.y + dy
-                
-                // Apply snap-to-grid if enabled
-                if (canvasPanel.snapToGrid) {
-                    val gridSize = (canvasPanel.GRID_SIZE * canvasPanel.zoomFactor).toInt()
-                    newX = (newX / gridSize) * gridSize
-                    newY = (newY / gridSize) * gridSize
-                }
-                
+            // Only apply snap-to-grid when moving a single node
+            if (canvasPanel.snapToGrid && canvasPanel.selectedNodes.size == 1) {
+                val nodeComp = canvasPanel.selectedNodes.first()
+                val gridSize = (canvasPanel.GRID_SIZE * canvasPanel.zoomFactor).toInt()
+                val newX = (nodeComp.x + dx) / gridSize * gridSize
+                val newY = (nodeComp.y + dy) / gridSize * gridSize
                 nodeComp.setLocation(newX, newY)
+            } else {
+                // Move all selected nodes without snapping
+                for (nodeComp in canvasPanel.selectedNodes) {
+                    val newX = nodeComp.x + dx
+                    val newY = nodeComp.y + dy
+                    nodeComp.setLocation(newX, newY)
+                }
             }
             
             // Update drag start point
