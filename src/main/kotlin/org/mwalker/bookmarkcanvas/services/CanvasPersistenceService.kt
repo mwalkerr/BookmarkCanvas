@@ -67,12 +67,12 @@ class SerializableNode : BaseState() {
                 contextLinesBefore = node.contextLinesBefore
                 contextLinesAfter = node.contextLinesAfter
             }.also {
-                LOG.info("Converted node to serializable: $it")
+//                LOG.info("Converted node to serializable: $it")
             }
         }
         
         fun toBookmarkNode(serialNode: SerializableNode): BookmarkNode {
-            LOG.info("Converting serializable node to BookmarkNode: $serialNode")
+//            LOG.info("Converting serializable node to BookmarkNode: $serialNode")
             return BookmarkNode(
                 id = serialNode.id ?: "",
                 bookmarkId = serialNode.bookmarkId ?: "",

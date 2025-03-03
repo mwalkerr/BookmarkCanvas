@@ -24,6 +24,11 @@ class NodeEventHandler(
 ) {
     private val LOG = Logger.getInstance(NodeEventHandler::class.java)
     
+    // Throttlers for mouse movement operations
+    private val nodeDragThrottler = EventThrottler(16) // ~60fps
+    private val nodeResizeThrottler = EventThrottler(16) // ~60fps
+    private val connectionDragThrottler = EventThrottler(16) // ~60fps
+    
     // State variables
     private var dragStart: Point? = null
     private var isDragging = false
@@ -120,6 +125,11 @@ class NodeEventHandler(
                         "isLeft: ${SwingUtilities.isLeftMouseButton(e)}, " + 
                         "isRight: ${SwingUtilities.isRightMouseButton(e)}")
                 
+                // Clear any pending throttled actions
+                nodeDragThrottler.clear()
+                nodeResizeThrottler.clear()
+                connectionDragThrottler.clear()
+                
                 val canvas = nodeComponent.parent as? CanvasPanel ?: return
                 
                 if (isDragging || isResizing) {
@@ -137,7 +147,7 @@ class NodeEventHandler(
                         node.height = (nodeComponent.height / canvas.zoomFactor).toInt()
                     }
                     
-                    // Save changes to canvas state
+                    // Save changes to canvas state only now (after mouseReleased)
                     CanvasPersistenceService.getInstance().saveCanvasState(project, canvas.canvasState)
                     
                     isDragging = false
@@ -146,17 +156,17 @@ class NodeEventHandler(
                     // If we're part of a selection group, forward the event to the canvas
                     forwardMouseEvent(nodeComponent, e, canvas)
                 } else if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger) {
-                    // Check if this node is part of a multi-selection
-                    if (canvas.selectedNodes.contains(nodeComponent) && canvas.selectedNodes.size > 1) {
+                    // Check if this is a connection creation
+                    if (connectionStarted) {
+                        // Forward connection completion event to canvas
+                        forwardMouseEvent(nodeComponent, e, canvas)
+                    } else if (canvas.selectedNodes.contains(nodeComponent) && canvas.selectedNodes.size > 1) {
                         // Forward to canvas for group context menu
                         forwardMouseEvent(nodeComponent, e, canvas)
-                    } else if (!connectionStarted) {
+                    } else {
                         // Only show context menu on release if we haven't started a connection
                         LOG.info("Showing context menu")
                         contextMenu.show(nodeComponent, e.x, e.y)
-                    } else {
-                        // Forward connection completion event to canvas
-                        forwardMouseEvent(nodeComponent, e, canvas)
                     }
                     twoFingerTapStartPoint = null
                     connectionStarted = false
@@ -173,15 +183,21 @@ class NodeEventHandler(
                     // Forward the event to the canvas for group dragging
                     forwardMouseEvent(nodeComponent, e, canvas)
                 } else if (isDragging) {
-                    // Handle individual dragging
-                    handleDragging(e)
+                    // Throttle individual node dragging 
+                    nodeDragThrottler.throttle {
+                        handleDragging(e)
+                    }
                 } else if (isResizing) {
-                    // Handle resizing
-                    handleResizing(e)
+                    // Throttle resizing operations
+                    nodeResizeThrottler.throttle {
+                        handleResizing(e)
+                    }
                 } else if (twoFingerTapStartPoint != null && 
                         (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger)) {
-                    // Two-finger drag to create connection
-                    handleConnectionDrag(e)
+                    // Throttle connection creation operations
+                    connectionDragThrottler.throttle {
+                        handleConnectionDrag(e)
+                    }
                 }
             }
             

@@ -113,3 +113,52 @@ object UIColors {
         Color(45, 65, 100)     // Dark mode
     )
 }
+
+/**
+ * Utility class to throttle frequent events like mouse movements and drags
+ * to improve performance by limiting how often an operation is executed.
+ */
+class EventThrottler(private val delayMs: Long = 16) { // ~60fps by default
+    private var lastExecutionTime: Long = 0
+    private var pendingRunnable: Runnable? = null
+    
+    /**
+     * Throttles the execution of the provided action
+     * @param action The action to execute after throttling
+     * @return true if action was executed immediately, false if throttled
+     */
+    fun throttle(action: () -> Unit): Boolean {
+        val currentTime = System.currentTimeMillis()
+        
+        // If enough time has passed since last execution, run immediately
+        if (currentTime - lastExecutionTime >= delayMs) {
+            action()
+            lastExecutionTime = currentTime
+            return true
+        }
+        
+        // Otherwise, cancel any pending execution and schedule a new one
+        pendingRunnable?.let { SwingUtilities.invokeLater { pendingRunnable = null } }
+        
+        // Create a new runnable for this action
+        pendingRunnable = Runnable {
+            action()
+            lastExecutionTime = System.currentTimeMillis()
+            pendingRunnable = null
+        }
+        
+        // Schedule for later execution
+        SwingUtilities.invokeLater { 
+            pendingRunnable?.run() 
+        }
+        
+        return false
+    }
+    
+    /**
+     * Clear any pending throttled actions
+     */
+    fun clear() {
+        pendingRunnable = null
+    }
+}

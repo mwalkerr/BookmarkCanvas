@@ -19,6 +19,11 @@ class CanvasEventHandler(
 ) {
     private val LOG = Logger.getInstance(CanvasEventHandler::class.java)
     
+    // Throttlers for mouse movement operations
+    private val panningThrottler = EventThrottler(16) // ~60fps
+    private val nodeDragThrottler = EventThrottler(16) // ~60fps
+    private val connectionThrottler = EventThrottler(16) // ~60fps
+    
     /**
      * Checks if a modifier key (Ctrl/Cmd) is pressed
      */
@@ -114,19 +119,30 @@ class CanvasEventHandler(
                         "connectionStartNode is null: ${canvasPanel.connectionStartNode == null}, isPanning: ${canvasPanel.isPanning}, isDrawingSelectionBox: ${canvasPanel.isDrawingSelectionBox}, " +
                         "component at point: ${canvasPanel.getComponentAt(e.point)}")
 
+                // Clear any pending throttled actions
+                panningThrottler.clear()
+                nodeDragThrottler.clear()
+                connectionThrottler.clear()
+
+                // Flag to track if we need to save state
+                var shouldSaveState = false
+
                 if (canvasPanel.connectionStartNode != null) {
                     // Try to find if there's a node at the release point
                     val comp = canvasPanel.getComponentAt(e.point)
                     if (comp is NodeComponent && comp != canvasPanel.connectionStartNode) {
                         val targetNode = comp
                         canvasPanel.createNewConnection(canvasPanel.connectionStartNode!!.node, targetNode.node)
+                        shouldSaveState = true
                     }
                     canvasPanel.connectionStartNode = null
                     canvasPanel.tempConnectionEndPoint = null
                     canvasPanel.repaint()
                 } else if (canvasPanel.isPanning) {
+                    // When panning ends, we should save the state
                     canvasPanel.isPanning = false
                     canvasPanel.cursor = Cursor.getDefaultCursor()
+                    shouldSaveState = true
                 } else if (canvasPanel.isDrawingSelectionBox) {
                     canvasPanel.isDrawingSelectionBox = false
                     canvasPanel.finalizeSelection()
@@ -147,13 +163,28 @@ class CanvasEventHandler(
                 }
                 
                 // Save node positions if we were dragging nodes
-                if (canvasPanel.dragStartPoint != null && !canvasPanel.isPanning && !canvasPanel.isDrawingSelectionBox && canvasPanel.selectedNodes.isNotEmpty()) {
+                if (canvasPanel.dragStartPoint != null && !canvasPanel.isDrawingSelectionBox && canvasPanel.selectedNodes.isNotEmpty()) {
                     for (nodeComp in canvasPanel.selectedNodes) {
                         nodeComp.node.position = Point(
                             (nodeComp.x / canvasPanel.zoomFactor).toInt(),
                             (nodeComp.y / canvasPanel.zoomFactor).toInt()
                         )
                     }
+                    shouldSaveState = true
+                }
+                
+                // Save scroll position
+                val scrollPane = canvasPanel.parent?.parent as? JScrollPane
+                if (scrollPane != null && shouldSaveState) {
+                    scrollPane.viewport?.let { viewport ->
+                        val viewPosition = viewport.viewPosition
+                        canvasPanel.canvasState.scrollPositionX = viewPosition.x
+                        canvasPanel.canvasState.scrollPositionY = viewPosition.y
+                    }
+                }
+                
+                // Save state once at the end if any actions require it
+                if (shouldSaveState) {
                     CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
                 }
                 
@@ -162,16 +193,26 @@ class CanvasEventHandler(
             
             override fun mouseDragged(e: MouseEvent) {
                 if (canvasPanel.isPanning && canvasPanel.dragStartPoint != null) {
-                    handlePanning(e)
+                    // Throttle panning events for better performance
+                    panningThrottler.throttle {
+                        handlePanning(e)
+                    }
                 } else if (canvasPanel.isDrawingSelectionBox) {
-                    // Update selection box
+                    // Update selection box - no need to throttle this as it's just updating
+                    // a variable and requesting repaint
                     canvasPanel.selectionEnd = e.point
                     canvasPanel.repaint()
                 } else if (canvasPanel.dragStartPoint != null && canvasPanel.selectedNodes.isNotEmpty()) {
-                    handleNodeDragging(e)
+                    // Throttle node dragging events for better performance
+                    nodeDragThrottler.throttle {
+                        handleNodeDragging(e)
+                    }
                 } else if (canvasPanel.connectionStartNode != null) {
-                    canvasPanel.tempConnectionEndPoint = e.point
-                    canvasPanel.repaint()
+                    // Throttle connection drawing events
+                    connectionThrottler.throttle {
+                        canvasPanel.tempConnectionEndPoint = e.point
+                        canvasPanel.repaint()
+                    }
                 }
             }
             
@@ -207,13 +248,13 @@ class CanvasEventHandler(
         // Update drag start point
         canvasPanel.dragStartPoint = e.point
         
-        // Save scroll position
+        // Update scroll position in memory (but don't save to persistent storage during panning)
         val scrollPane = canvasPanel.parent?.parent as? JScrollPane
         scrollPane?.viewport?.let { viewport ->
             val viewPosition = viewport.viewPosition
             canvasPanel.canvasState.scrollPositionX = viewPosition.x
             canvasPanel.canvasState.scrollPositionY = viewPosition.y
-            CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
+            // No saving during panning - will save on mouse release instead
         }
         
         canvasPanel.repaint()
@@ -272,12 +313,13 @@ class CanvasEventHandler(
                     canvasPanel.zoomOut()
                 }
                 
-                // Save scroll position
+                // Save state after zoom changes
                 val scrollPane = canvasPanel.parent?.parent as? JScrollPane
                 scrollPane?.viewport?.let { viewport ->
                     val viewPosition = viewport.viewPosition
                     canvasPanel.canvasState.scrollPositionX = viewPosition.x
                     canvasPanel.canvasState.scrollPositionY = viewPosition.y
+                    // Save since zoom is a discrete operation, not continuous like dragging
                     CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
                 }
             }
