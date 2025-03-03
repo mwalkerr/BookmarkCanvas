@@ -28,6 +28,13 @@
             <add-to-group group-id="EditorPopupMenu.GoTo" anchor="last"/>
         </action>
         
+        <action id="BookmarkCanvas.AddFileToCanvas"
+                class="org.mwalker.bookmarkcanvas.actions.AddFileToCanvasAction"
+                text="Add File to Bookmark Canvas"
+                description="Add this file to the Bookmark Canvas">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+        
         <!-- Canvas-specific actions -->
         <action id="BookmarkCanvas.Undo"
                 class="org.mwalker.bookmarkcanvas.actions.UndoAction"

@@ -50,11 +50,16 @@ data class BookmarkNode(
     /**
      * Gets the display name for this node. If no custom name is set,
      * returns a default name based on filename and line number.
+     * If lineNumber0Based is 0, only the filename is displayed.
      */
     fun getDisplayText(): String {
         return displayName ?: run {
             val fileName = filePath.substringAfterLast("/").substringAfterLast("\\")
-            "$fileName:${lineNumber0Based + 1}"
+            if (lineNumber0Based == 0) {
+                fileName
+            } else {
+                "$fileName:${lineNumber0Based + 1}"
+            }
         }
     }
 
