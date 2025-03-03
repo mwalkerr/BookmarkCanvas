@@ -21,6 +21,13 @@ class CanvasZoomManager(
         canvasPanel._zoomFactor *= 1.2
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
+        
+        // Explicitly repaint all components to ensure text visibility
+        for (nodeComp in nodeComponents.values) {
+            nodeComp.revalidate()
+            nodeComp.repaint()
+        }
+        
         saveViewState()
         canvasPanel.repaint()
     }
@@ -33,6 +40,13 @@ class CanvasZoomManager(
         if (canvasPanel._zoomFactor < 0.1) canvasPanel._zoomFactor = 0.1
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
+        
+        // Explicitly repaint all components to ensure text visibility
+        for (nodeComp in nodeComponents.values) {
+            nodeComp.revalidate()
+            nodeComp.repaint()
+        }
+        
         saveViewState()
         canvasPanel.repaint()
     }

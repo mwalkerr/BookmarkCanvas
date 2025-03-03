@@ -36,6 +36,10 @@ class NodeUIManager(
         private const val CONTENT_PADDING = 10
         private const val BASE_TITLE_FONT_SIZE = 12
         private const val BASE_CODE_FONT_SIZE = 12
+        
+        // Absolute minimum sizes regardless of zoom factor to ensure visibility
+        private const val MIN_VISIBLE_TITLE_SIZE = 6
+        private const val MIN_VISIBLE_CODE_SIZE = 6
     }
     
     // Core UI components
@@ -128,18 +132,33 @@ class NodeUIManager(
      * Updates font sizes based on the provided zoom factor
      */
     fun updateFontSizes(zoomFactor: Double) {
-        // Update title font
-        val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(8)
-        titleTextPane.font = titleTextPane.font.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
+        // Update title font - ensure minimum size is proportional to zoom
+        // but never below an absolute minimum to maintain visibility
+        val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_TITLE_SIZE)
         
-        // Ensure foreground color is set (fixes visibility issues)
+        // Get current font and ensure we maintain the style but update the size
+        val currentFont = titleTextPane.font
+        val newFont = currentFont.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
+        
+        // Apply the new font and make sure color is set properly
+        titleTextPane.font = newFont
         titleTextPane.foreground = UIColors.NODE_TEXT_COLOR
         titleTextPane.document.putProperty("ForegroundColor", UIColors.NODE_TEXT_COLOR)
         
+        // After adjusting font, ensure it's visible by forcing display update
+        titleTextPane.invalidate()
+        titleTextPane.validate()
+        
         // Update code area font if present
         codeArea?.let { area ->
-            val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(8)
-            area.font = Font("Monospaced", Font.PLAIN, scaledCodeSize)
+            val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_CODE_SIZE)
+            val newCodeFont = Font("Monospaced", Font.PLAIN, scaledCodeSize)
+            area.font = newCodeFont
+            area.foreground = UIColors.NODE_TEXT_COLOR // Ensure text color is visible
+            
+            // Force the code area to update as well
+            area.invalidate()
+            area.validate()
         }
     }
     
