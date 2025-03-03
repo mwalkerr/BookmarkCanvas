@@ -28,6 +28,9 @@ class CanvasZoomManager(
             nodeComp.repaint()
         }
         
+        // Force grid cache update since zoom level changed
+        canvasPanel.invalidateGridCache()
+        
         saveViewState()
         canvasPanel.repaint()
     }
@@ -46,6 +49,9 @@ class CanvasZoomManager(
             nodeComp.revalidate()
             nodeComp.repaint()
         }
+        
+        // Force grid cache update since zoom level changed
+        canvasPanel.invalidateGridCache()
         
         saveViewState()
         canvasPanel.repaint()
@@ -131,6 +137,7 @@ class CanvasZoomManager(
         canvasPanel._zoomFactor = 0.8
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
         updateCanvasSize()
+        canvasPanel.invalidateGridCache() // Force grid cache update
         canvasPanel.repaint()
         
         // Scroll to position that places the top-left node in view with some buffer space

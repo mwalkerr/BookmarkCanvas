@@ -62,6 +62,11 @@ class CanvasPanel(val project: Project) : JPanel() {
             Color(100, 150, 230) // Dark mode
         )
     }
+    
+    // Cached grid for performance
+    private var gridCache: Image? = null
+    private var gridCacheZoom = 0.0
+    private var gridCacheSize = Dimension(0, 0)
 
     init {
         // Initialize grid settings from canvas state
@@ -197,8 +202,8 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Persist the state
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
         
-        // No longer snap existing nodes when toggling - only affect future drags
-        repaint()
+        // Invalidate grid cache
+        invalidateGridCache()
     }
     
     fun setShowGrid(value: Boolean) {
@@ -210,7 +215,8 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Persist the state
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
         
-        repaint()
+        // Invalidate grid cache
+        invalidateGridCache()
     }
 
     override fun paintComponent(g: Graphics) {
@@ -220,9 +226,14 @@ class CanvasPanel(val project: Project) : JPanel() {
         // Set rendering hints for smoother lines
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
-        // Draw grid if enabled
+        // Draw grid if enabled using cached grid
         if (showGrid) {
-            drawGrid(g2d)
+            // Check if we need to refresh the grid cache
+            if (needToRegenerateGridCache()) {
+                generateGridCache()
+            }
+            // Draw cached grid
+            gridCache?.let { g2d.drawImage(it, 0, 0, null) }
         }
 
         // Draw connections between nodes
@@ -243,23 +254,65 @@ class CanvasPanel(val project: Project) : JPanel() {
         g2d.dispose()
     }
     
-    private fun drawGrid(g2d: Graphics2D) {
-        g2d.color = GRID_COLOR
+    /**
+     * Check if we need to regenerate the grid cache
+     */
+    private fun needToRegenerateGridCache(): Boolean {
+        if (gridCache == null) return true
+        if (gridCacheZoom != zoomFactor) return true
+        if (gridCacheSize.width < width || gridCacheSize.height < height) return true
+        return false
+    }
+    
+    /**
+     * Generate the grid cache image for better performance
+     */
+    private fun generateGridCache() {
         val scaledGridSize = (GRID_SIZE * zoomFactor).toInt()
-
+        
+        // Create image with some padding for scrolling
+        val cacheWidth = width + scaledGridSize 
+        val cacheHeight = height + scaledGridSize
+        
+        // Create the cache image at the current size
+        val cache = createImage(cacheWidth, cacheHeight)
+        val g2d = cache.graphics as Graphics2D
+        
+        // Fill background (may not be necessary if canvas is opaque)
+        g2d.color = background
+        g2d.fillRect(0, 0, cacheWidth, cacheHeight)
+        
+        // Draw the grid lines
+        g2d.color = GRID_COLOR
+        
         // Draw vertical lines
         var x = 0
-        while (x < width) {
-            g2d.drawLine(x, 0, x, height)
+        while (x < cacheWidth) {
+            g2d.drawLine(x, 0, x, cacheHeight)
             x += scaledGridSize
         }
 
         // Draw horizontal lines
         var y = 0
-        while (y < height) {
-            g2d.drawLine(0, y, width, y)
+        while (y < cacheHeight) {
+            g2d.drawLine(0, y, cacheWidth, y)
             y += scaledGridSize
         }
+        
+        g2d.dispose()
+        
+        // Store the cache and its properties
+        gridCache = cache
+        gridCacheZoom = zoomFactor
+        gridCacheSize = Dimension(cacheWidth, cacheHeight)
+    }
+    
+    /**
+     * Force regenerate grid cache, e.g. when theme changes
+     */
+    fun invalidateGridCache() {
+        gridCache = null
+        repaint()
     }
     
     // Paint the selection box in the glass pane layer to ensure it's on top

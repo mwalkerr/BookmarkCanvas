@@ -11,6 +11,11 @@ import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
 import com.intellij.util.xmlb.annotations.Transient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.swing.Swing
 
 /**
  * A state class specifically designed for serialization.
@@ -143,11 +148,18 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
     @Transient
     private val projectCanvasMap = mutableMapOf<String, CanvasState>()
     
+    // Coroutine scope for background operations
+    @Transient
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    
+    // Keep track of save jobs to prevent concurrent modifications
+    @Transient
+    private val saveJobs = mutableMapOf<String, Job>()
+    
     companion object {
         private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
         
         fun getInstance(): CanvasPersistenceService {
-            LOG.info("Getting CanvasPersistenceService instance")
             return ApplicationManager.getApplication().getService(CanvasPersistenceService::class.java)
         }
     }
@@ -157,13 +169,10 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
     }
 
     fun getCanvasState(project: Project): CanvasState {
-        LOG.info("Getting canvas state for project: ${project.name}")
-
         val projectId = project.locationHash
         
         // If we already have it in memory, return it
         if (projectCanvasMap.containsKey(projectId)) {
-            LOG.info("Returning existing in-memory state for project $projectId")
             return projectCanvasMap[projectId]!!
         }
         
@@ -201,8 +210,6 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
             } catch (e: Exception) {
                 LOG.error("Failed to deserialize canvas state: ${e.message}", e)
             }
-        } else {
-            LOG.info("No saved state found for project $projectId")
         }
         
         // If all else fails, return a new empty state
@@ -211,38 +218,72 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
         return newState
     }
 
+    /**
+     * Asynchronously saves the canvas state to persistent storage.
+     * This version uses coroutines to avoid blocking the UI thread.
+     */
     fun saveCanvasState(project: Project, canvasState: CanvasState) {
-        LOG.info("Saving canvas state for project: ${project.name} with ${canvasState.nodes.size} nodes")
+        // Store in memory immediately (this is fast)
         val projectId = project.locationHash
         projectCanvasMap[projectId] = canvasState
         
-        // Convert to serializable format
-        val persistentState = PersistentCanvasState()
-        persistentState.projectId = projectId
+        // Cancel any previously running save job for this project
+        saveJobs[projectId]?.cancel()
         
-        // Convert nodes
-        for (node in canvasState.nodes.values) {
-            val serialNode = SerializableNode.fromBookmarkNode(node)
-            persistentState.nodeMap[node.id] = serialNode
+        // Start a new background job to save the state
+        saveJobs[projectId] = coroutineScope.launch {
+            try {
+                // Create a snapshot of the current state to work with
+                val stateCopy = CanvasState()
+                stateCopy.snapToGrid = canvasState.snapToGrid
+                stateCopy.showGrid = canvasState.showGrid
+                stateCopy.zoomFactor = canvasState.zoomFactor
+                stateCopy.scrollPositionX = canvasState.scrollPositionX
+                stateCopy.scrollPositionY = canvasState.scrollPositionY
+                
+                // Copy nodes and connections
+                for (node in canvasState.nodes.values) {
+                    stateCopy.addNode(node.copy())
+                }
+                for (connection in canvasState.connections) {
+                    stateCopy.addConnection(connection.copy())
+                }
+                
+                // Convert to serializable format (now on IO thread)
+                val persistentState = PersistentCanvasState()
+                persistentState.projectId = projectId
+                
+                // Convert nodes
+                for (node in stateCopy.nodes.values) {
+                    val serialNode = SerializableNode.fromBookmarkNode(node)
+                    persistentState.nodeMap[node.id] = serialNode
+                }
+                
+                // Convert connections
+                for (connection in stateCopy.connections) {
+                    val serialConn = SerializableConnection.fromNodeConnection(connection)
+                    persistentState.connections.add(serialConn)
+                }
+                
+                // Save grid preferences and view state
+                persistentState.snapToGrid = stateCopy.snapToGrid
+                persistentState.showGrid = stateCopy.showGrid
+                persistentState.zoomFactor = stateCopy.zoomFactor.toFloat()
+                persistentState.scrollPositionX = stateCopy.scrollPositionX
+                persistentState.scrollPositionY = stateCopy.scrollPositionY
+                
+                // Switch back to UI thread to update the state safely
+                launch(Dispatchers.Swing) {
+                    // Update serialized state
+                    state.projectStates.put(projectId, persistentState)
+                    LOG.info("Canvas state for project ${project.name} saved successfully")
+                }
+            } catch (e: Exception) {
+                LOG.error("Error saving canvas state: ${e.message}", e)
+            } finally {
+                // Clean up job reference
+                saveJobs.remove(projectId)
+            }
         }
-        
-        // Convert connections
-        for (connection in canvasState.connections) {
-            val serialConn = SerializableConnection.fromNodeConnection(connection)
-            persistentState.connections.add(serialConn)
-        }
-        
-        // Save grid preferences and view state
-        persistentState.snapToGrid = canvasState.snapToGrid
-        persistentState.showGrid = canvasState.showGrid
-        persistentState.zoomFactor = canvasState.zoomFactor.toFloat()
-        persistentState.scrollPositionX = canvasState.scrollPositionX
-        persistentState.scrollPositionY = canvasState.scrollPositionY
-        
-        // Update serialized state
-        state.projectStates.put(projectId, persistentState)
-        
-        // Make sure we commit changes to storage
-        LOG.info("State updated, project count: ${state.projectStates.size}")
     }
 }

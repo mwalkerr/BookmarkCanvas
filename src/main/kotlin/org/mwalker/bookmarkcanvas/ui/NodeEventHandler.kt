@@ -176,6 +176,7 @@ class NodeEventHandler(
             }
 
             override fun mouseDragged(e: MouseEvent) {
+                // No logging for drag events for better performance
                 val canvas = nodeComponent.parent as? CanvasPanel ?: return
                 
                 // Check if we're part of a multi-selection

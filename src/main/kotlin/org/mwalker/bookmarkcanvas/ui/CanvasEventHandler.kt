@@ -192,6 +192,7 @@ class CanvasEventHandler(
             }
             
             override fun mouseDragged(e: MouseEvent) {
+                // We don't log mouse drag events for better performance
                 if (canvasPanel.isPanning && canvasPanel.dragStartPoint != null) {
                     // Throttle panning events for better performance
                     panningThrottler.throttle {

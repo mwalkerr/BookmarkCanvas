@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.ui.components.JBScrollPane
 import javax.swing.JScrollPane
 import java.awt.Dimension
 
@@ -21,7 +22,7 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
     init {
         // Create the canvas panel
         canvasPanel = org.mwalker.bookmarkcanvas.ui.CanvasPanel(project)
-        val scrollPane = JScrollPane(canvasPanel)
+        val scrollPane = JBScrollPane(canvasPanel)
         scrollPane.verticalScrollBar.unitIncrement = 16
         scrollPane.horizontalScrollBar.unitIncrement = 16
 
