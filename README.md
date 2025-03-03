@@ -6,6 +6,10 @@ The canvas should make it easy to quickly jump to a bookmarked location
 
 This was written 99% by Claude 3.7 through [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) 
 
+
+https://github.com/user-attachments/assets/ae1bb649-2954-4f61-befa-3b252eb74a3e
+
+
 ## Features
 
 - Add a bookmark to the canvas from the "Bookmarks" tool window
