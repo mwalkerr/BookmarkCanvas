@@ -65,9 +65,20 @@ data class BookmarkNode(
 
     fun getCodeSnippet(project: Project?): String = kotlin.runCatching {
         if (project == null) return@runCatching "No project"
-
-        val file = project.baseDir.findFileByRelativePath(filePath)
-            ?: return@runCatching "File not found"
+        
+            // For selected text bookmarks, we want to show the entire selection with different formatting
+        // We don't use a special property anymore, just control it with contextLines parameters
+        
+        // Regular bookmark approach - get snippet from file
+        // Handle both absolute paths and project-relative paths
+        val file = if (filePath.startsWith("/") || filePath.contains(":\\")) {
+            // Absolute path
+            com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath)
+        } else {
+            // Project-relative path
+            project.baseDir.findFileByRelativePath(filePath)
+        }
+            ?: return@runCatching "File not found: $filePath"
 
         val psiFile = PsiManager.getInstance(project).findFile(file)
             ?: return@runCatching "Cannot read file"
@@ -140,7 +151,14 @@ data class BookmarkNode(
     }
 
     fun navigateToBookmark(project: Project) {
-        val file = project.baseDir.findFileByRelativePath(filePath)
+        // Handle both absolute paths and project-relative paths
+        val file = if (filePath.startsWith("/") || filePath.contains(":\\")) {
+            // Absolute path
+            com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath)
+        } else {
+            // Project-relative path
+            project.baseDir.findFileByRelativePath(filePath)
+        }
         if (file != null) {
             // Open the file in the editor
             val fileEditorManager = FileEditorManager.getInstance(project)
@@ -151,6 +169,34 @@ data class BookmarkNode(
             if (psiFile != null) {
                 val document = psiFile.viewProvider.document
                 if (document != null) {
+                    // If this is a selected text bookmark with multiple lines, select those lines
+                    if (showCodeSnippet && contextLinesAfter > 0) {
+                        try {
+                            val startLine = lineNumber0Based
+                            val endLine = lineNumber0Based + contextLinesAfter
+                            
+                            // Get the start and end offsets
+                            val startOffset = document.getLineStartOffset(startLine)
+                            val endOffset = document.getLineEndOffset(endLine)
+                            
+                            // Navigate and select
+                            val editor = fileEditorManager.selectedTextEditor
+                            if (editor != null) {
+                                // Move to the start of the selection
+                                editor.caretModel.moveToOffset(startOffset)
+                                editor.selectionModel.setSelection(startOffset, endOffset)
+                                editor.scrollingModel.scrollToCaret(
+                                    com.intellij.openapi.editor.ScrollType.CENTER
+                                )
+                                return
+                            }
+                        } catch (e: Exception) {
+                            LOG.error("Error selecting lines", e)
+                            // Fall back to regular navigation if selection fails
+                        }
+                    }
+                
+                    // Regular bookmark handling
                     val currentLineContents = document.text.split("\n").getOrNull(lineNumber0Based)
                     // First try to find exact line
                     if (lineNumber0Based >= 0 && lineNumber0Based < document.lineCount && currentLineContents?.trim() == lineContent?.trim()) {
