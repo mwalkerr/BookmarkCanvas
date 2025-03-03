@@ -14,6 +14,7 @@ import javax.swing.border.EmptyBorder
 import javax.swing.border.LineBorder
 import javax.swing.text.JTextComponent
 import javax.swing.text.View
+import javax.swing.SwingUtilities
 
 /**
  * A UI component that represents a bookmark node on the canvas.
@@ -99,10 +100,23 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         eventHandler.setupDragBehavior()
         eventHandler.setupKeyboardNavigation()
 
-        // Set size based on content
-        val size = uiManager.updatePreferredSize(this)
-        setSize(size)
-        preferredSize = size
+        // Set size based on persisted value or content
+        if (node.width > 0 && node.height > 0) {
+            // Get the canvas panel to access zoom factor
+            val canvasPanel = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)
+            val zoomFactor = if (canvasPanel != null) (canvasPanel as CanvasPanel).zoomFactor else 1.0
+            
+            // Apply zoom factor to stored dimensions
+            val scaledWidth = (node.width * zoomFactor).toInt()
+            val scaledHeight = (node.height * zoomFactor).toInt()
+            val size = Dimension(scaledWidth, scaledHeight)
+            setSize(size)
+            preferredSize = size
+        } else {
+            val size = uiManager.updatePreferredSize(this)
+            setSize(size)
+            preferredSize = size
+        }
     }
     
     /**
@@ -120,10 +134,24 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
     override fun updateTitle(title: String) {
         uiManager.updateTitle(title)
         
-        // Recalculate size based on new text
-        val size = uiManager.updatePreferredSize(this)
-        setSize(size)
-        preferredSize = size
+        // Use persisted size if available, otherwise recalculate
+        if (node.width > 0 && node.height > 0) {
+            // Keep the persisted size, but ensure it's properly scaled
+            val canvasPanel = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)
+            val zoomFactor = if (canvasPanel != null) (canvasPanel as CanvasPanel).zoomFactor else 1.0
+            
+            // Apply zoom factor to stored dimensions
+            val scaledWidth = (node.width * zoomFactor).toInt()
+            val scaledHeight = (node.height * zoomFactor).toInt()
+            
+            setSize(scaledWidth, scaledHeight)
+            preferredSize = Dimension(scaledWidth, scaledHeight)
+        } else {
+            // Recalculate size based on new text
+            val size = uiManager.updatePreferredSize(this)
+            setSize(size)
+            preferredSize = size
+        }
         
         // Update UI
         titlePanel.revalidate()
@@ -147,17 +175,42 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         
         add(titlePanel, BorderLayout.NORTH)
 
+        // Get the canvas panel to access zoom factor
+        val canvasPanel = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)
+        val zoomFactor = if (canvasPanel != null) (canvasPanel as CanvasPanel).zoomFactor else 1.0
+        
         // Re-add code area if needed
         if (node.showCodeSnippet) {
             val scrollPane = uiManager.setupCodeSnippetView(this)
             add(scrollPane, BorderLayout.CENTER)
-            preferredSize = Dimension(250, 200)
-            setSize(250, 200)
+            
+            // Use persisted size if available, or default size for code snippet
+            if (node.width > 0 && node.height > 0) {
+                // Apply zoom factor to stored dimensions
+                val scaledWidth = (node.width * zoomFactor).toInt()
+                val scaledHeight = (node.height * zoomFactor).toInt()
+                preferredSize = Dimension(scaledWidth, scaledHeight)
+                setSize(scaledWidth, scaledHeight)
+            } else {
+                // Default size for code snippet
+                val defaultWidth = (250 * zoomFactor).toInt()
+                val defaultHeight = (200 * zoomFactor).toInt()
+                preferredSize = Dimension(defaultWidth, defaultHeight)
+                setSize(defaultWidth, defaultHeight)
+            }
         } else {
-            // Update size based on title only
-            val size = uiManager.updatePreferredSize(this)
-            setSize(size)
-            preferredSize = size
+            // Use persisted size if available, or calculate based on title
+            if (node.width > 0 && node.height > 0) {
+                // Apply zoom factor to stored dimensions
+                val scaledWidth = (node.width * zoomFactor).toInt()
+                val scaledHeight = (node.height * zoomFactor).toInt()
+                preferredSize = Dimension(scaledWidth, scaledHeight)
+                setSize(scaledWidth, scaledHeight)
+            } else {
+                val size = uiManager.updatePreferredSize(this)
+                setSize(size)
+                preferredSize = size
+            }
         }
 
         // Update component size

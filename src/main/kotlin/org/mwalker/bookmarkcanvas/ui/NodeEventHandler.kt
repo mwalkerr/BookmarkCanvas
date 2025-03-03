@@ -123,12 +123,19 @@ class NodeEventHandler(
                 val canvas = nodeComponent.parent as? CanvasPanel ?: return
                 
                 if (isDragging || isResizing) {
-                    // Save position and size when released
+                    // Save position when released
                     val location = nodeComponent.location
                     node.position = Point(
                         (location.x / (canvas.zoomFactor)).toInt(),
                         (location.y / (canvas.zoomFactor)).toInt()
                     )
+                    
+                    // Save size when released (if resizing occurred)
+                    if (isResizing) {
+                        // Normalize size by zoom factor, just like we do with position
+                        node.width = (nodeComponent.width / canvas.zoomFactor).toInt()
+                        node.height = (nodeComponent.height / canvas.zoomFactor).toInt()
+                    }
                     
                     // Save changes to canvas state
                     CanvasPersistenceService.getInstance().saveCanvasState(project, canvas.canvasState)
@@ -232,13 +239,18 @@ class NodeEventHandler(
      * Handles node resizing logic
      */
     private fun handleResizing(e: MouseEvent) {
+        val canvas = nodeComponent.parent as? CanvasPanel
         val current = e.point
         val widthDelta = current.x - dragStart!!.x
         val heightDelta = current.y - dragStart!!.y
         
         // Calculate new size
-        val newWidth = (nodeComponent.width + widthDelta).coerceAtLeast(120)
-        val newHeight = (nodeComponent.height + heightDelta).coerceAtLeast(40)
+        val newWidth = (nodeComponent.width + widthDelta).coerceAtLeast(
+            (120 * (canvas?.zoomFactor ?: 1.0)).toInt()
+        )
+        val newHeight = (nodeComponent.height + heightDelta).coerceAtLeast(
+            (40 * (canvas?.zoomFactor ?: 1.0)).toInt()
+        )
         
         // Update size - use both for better compatibility
         val newSize = Dimension(newWidth, newHeight)

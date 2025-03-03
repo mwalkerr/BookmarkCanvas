@@ -19,6 +19,8 @@ data class BookmarkNode(
     var lineContent: String? = null, // Content of the line for relocation
     var positionX: Int = 100, // Default X position
     var positionY: Int = 100, // Default Y position
+    var width: Int = 0, // Width of the node (0 means use default size)
+    var height: Int = 0, // Height of the node (0 means use default size)
     var showCodeSnippet: Boolean = false,
     var contextLinesBefore: Int = 3,
     var contextLinesAfter: Int = 3

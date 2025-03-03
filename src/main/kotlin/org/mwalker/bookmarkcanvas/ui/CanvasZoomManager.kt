@@ -68,11 +68,20 @@ class CanvasZoomManager(
             val scaledY = (originalPos.y * canvasPanel.zoomFactor).toInt()
             nodeComp.setLocation(scaledX, scaledY)
 
-            // Scale the size too
-            val prefSize = nodeComp.preferredSize
-            val scaledWidth = (prefSize.width * canvasPanel.zoomFactor).toInt()
-            val scaledHeight = (prefSize.height * canvasPanel.zoomFactor).toInt()
-            nodeComp.setSize(scaledWidth, scaledHeight)
+            // Scale the size based on the node's persisted size or preferred size
+            if (nodeComp.node.width > 0 && nodeComp.node.height > 0) {
+                // Use persisted size scaled to current zoom
+                val scaledWidth = (nodeComp.node.width * canvasPanel.zoomFactor).toInt()
+                val scaledHeight = (nodeComp.node.height * canvasPanel.zoomFactor).toInt()
+                nodeComp.setSize(scaledWidth, scaledHeight)
+                nodeComp.preferredSize = Dimension(scaledWidth, scaledHeight)
+            } else {
+                // Fall back to preferred size
+                val prefSize = nodeComp.preferredSize
+                val scaledWidth = (prefSize.width * canvasPanel.zoomFactor).toInt()
+                val scaledHeight = (prefSize.height * canvasPanel.zoomFactor).toInt()
+                nodeComp.setSize(scaledWidth, scaledHeight)
+            }
             
             // Update font sizes based on zoom factor
             nodeComp.updateFontSizes(canvasPanel.zoomFactor)

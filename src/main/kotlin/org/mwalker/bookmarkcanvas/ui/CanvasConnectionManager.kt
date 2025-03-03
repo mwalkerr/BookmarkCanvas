@@ -20,11 +20,25 @@ class CanvasConnectionManager(
     private val project: Project
 ) {
     /**
-     * Creates a new connection between two bookmark nodes
+     * Creates a new connection between two bookmark nodes.
+     * If a connection already exists between the nodes, it will be removed instead.
      */
     fun createNewConnection(source: BookmarkNode, target: BookmarkNode) {
-        val connection = NodeConnection(source.id, target.id)
-        canvasPanel.canvasState.addConnection(connection)
+        // Check if connection already exists
+        val existingConnection = canvasPanel.canvasState.connections.find { 
+            (it.sourceNodeId == source.id && it.targetNodeId == target.id) ||
+            (it.sourceNodeId == target.id && it.targetNodeId == source.id)
+        }
+        
+        if (existingConnection != null) {
+            // Remove existing connection
+            canvasPanel.canvasState.removeConnection(existingConnection.id)
+        } else {
+            // Create new connection
+            val connection = NodeConnection(source.id, target.id)
+            canvasPanel.canvasState.addConnection(connection)
+        }
+        
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
         canvasPanel.repaint()
     }

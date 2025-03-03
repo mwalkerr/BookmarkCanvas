@@ -43,6 +43,8 @@ class SerializableNode : BaseState() {
     var lineNumber by property(0)
     var positionX by property(100)
     var positionY by property(100)
+    var width by property(0)
+    var height by property(0)
     var showCodeSnippet by property(false)
     var contextLinesBefore by property(3)
     var contextLinesAfter by property(3)
@@ -57,6 +59,8 @@ class SerializableNode : BaseState() {
                 lineNumber = node.lineNumber
                 positionX = node.positionX
                 positionY = node.positionY
+                width = node.width
+                height = node.height
                 showCodeSnippet = node.showCodeSnippet
                 contextLinesBefore = node.contextLinesBefore
                 contextLinesAfter = node.contextLinesAfter
@@ -72,6 +76,8 @@ class SerializableNode : BaseState() {
                 lineNumber = serialNode.lineNumber,
                 positionX = serialNode.positionX,
                 positionY = serialNode.positionY,
+                width = serialNode.width,
+                height = serialNode.height,
                 showCodeSnippet = serialNode.showCodeSnippet,
                 contextLinesBefore = serialNode.contextLinesBefore,
                 contextLinesAfter = serialNode.contextLinesAfter
