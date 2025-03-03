@@ -50,8 +50,9 @@ The canvas should make it easy to quickly jump to a bookmarked location
 See [CLAUDE.md](CLAUDE.md) for development guidelines.
 
 ### TODO
-- automatically adjusting line when file content changes
 - syntax highlighting for code in the node
+- fix issue with font size for snippet when context changed
+- auto sizing
 
 ## License
 

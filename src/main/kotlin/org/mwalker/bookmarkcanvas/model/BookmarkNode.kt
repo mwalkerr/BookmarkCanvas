@@ -92,11 +92,31 @@ data class BookmarkNode(
         }
         
         // Normalize indentation to start at 0
-        return@runCatching normalizeIndentation(snippetText)
+        val normalizedText = normalizeIndentation(snippetText)
+        
+        // Format each line with proper prefix
+        return@runCatching formatWithLinePrefix(normalizedText, startLine, lineNumber0Based)
     }.onFailure {
         LOG.error("Error getting code snippet", it)
         "Error getting code snippet: ${it.message}"
     }.getOrNull() ?: ""
+    
+    /**
+     * Formats code snippet text where each line is prefixed with "  " (two spaces)
+     * and the bookmarked line is prefixed with "> " instead
+     */
+    private fun formatWithLinePrefix(text: String, startLine: Int, bookmarkedLine: Int): String {
+        val lines = text.lines()
+        val formattedLines = lines.mapIndexed { index, line ->
+            val currentLineNumber = startLine + index
+            if (currentLineNumber == bookmarkedLine) {
+                "> $line" // Bookmarked line prefix
+            } else {
+                "  $line" // Regular line prefix
+            }
+        }
+        return formattedLines.joinToString("\n")
+    }
     
     /**
      * Normalizes the indentation of a code snippet so the minimum indentation level is 0
@@ -179,19 +199,25 @@ data class BookmarkNode(
      */
     private fun findLineNumber0BasedByContent(document: Document, content: String): Int? {
         val text = document.text
-        // For multi-line content, search only for the first line
         val searchContent = content.trim()
         if (searchContent.isEmpty()) return null
 
-        val index = text.indexOf(searchContent)
-        if (index >= 0) {
-            // Find the line number containing the content
-            return document.getLineNumber(index)
+        val lines = text.lines()
+        var closestLine: Int? = null
+        var minDistance = Int.MAX_VALUE
+
+        lines.forEachIndexed { index, line ->
+            if (line.contains(searchContent)) {
+                val distance = kotlin.math.abs(index - lineNumber0Based)
+                if (distance < minDistance) {
+                    minDistance = distance
+                    closestLine = index
+                }
+            }
         }
 
-        return null
+        return closestLine
     }
-    
     /**
      * Finds the NodeComponent in the UI tree that represents this BookmarkNode
      * and updates its display
