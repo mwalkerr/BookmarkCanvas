@@ -82,7 +82,7 @@ class CanvasContextMenuManager(
             ): Component {
                 val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
                 val bookmark = value as BookmarkNode
-                label.text = bookmark.displayName
+                label.text = bookmark.getDisplayText()
                 return label
             }
         }

@@ -53,7 +53,7 @@ class NodeUIManager(
                 return false // Make transparent to mouse events
             }
         }.apply {
-            text = node.displayName
+            text = node.getDisplayText()
             foreground = UIColors.NODE_TEXT_COLOR
             document.putProperty("ForegroundColor", UIColors.NODE_TEXT_COLOR)
             font = font.deriveFont(Font.BOLD)
@@ -147,11 +147,11 @@ class NodeUIManager(
      * Updates the size of the node based on its content
      */
     fun updatePreferredSize(parentComponent: JPanel): Dimension {
-        LOG.info("Updating size for node: ${node.displayName}, showCodeSnippet: ${node.showCodeSnippet}")
+        LOG.info("Updating size for node: ${node.getDisplayText()}, showCodeSnippet: ${node.showCodeSnippet}")
         
         if (!node.showCodeSnippet) {
             // Calculate text height using LineBreakMeasurer for accurate wrapping
-            val displayText = node.displayName
+            val displayText = node.getDisplayText()
             // Use the current component width if it's valid
             val effectiveWidth = if (parentComponent.width > 0) 
                                      parentComponent.width - (CONTENT_PADDING * 2) 
@@ -207,7 +207,7 @@ class NodeUIManager(
         
         // Recalculate text height for new width
         val textHeight = calculateTextHeight(
-            node.displayName,
+            node.getDisplayText(),
             titleTextPane.font,
             effectiveWidth,
             getFontRenderContext(titleTextPane)

@@ -11,7 +11,6 @@ import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
 import com.intellij.util.xmlb.annotations.Transient
-import java.util.*
 
 /**
  * A state class specifically designed for serialization.
@@ -38,8 +37,9 @@ class PersistentCanvasState : BaseState() {
 class SerializableNode : BaseState() {
     var id by string("")
     var bookmarkId by string("")
-    var displayName by string("")
+    var displayName by string(null)
     var filePath by string("")
+    var lineContent by string("")
     var lineNumber by property(0)
     var positionX by property(100)
     var positionY by property(100)
@@ -50,13 +50,15 @@ class SerializableNode : BaseState() {
     var contextLinesAfter by property(3)
     
     companion object {
+        private val LOG = Logger.getInstance(SerializableNode::class.java)
         fun fromBookmarkNode(node: BookmarkNode): SerializableNode {
             return SerializableNode().apply {
                 id = node.id
                 bookmarkId = node.bookmarkId
                 displayName = node.displayName
                 filePath = node.filePath
-                lineNumber = node.lineNumber
+                lineContent = node.lineContent ?: ""
+                lineNumber = node.lineNumber0Based
                 positionX = node.positionX
                 positionY = node.positionY
                 width = node.width
@@ -64,16 +66,20 @@ class SerializableNode : BaseState() {
                 showCodeSnippet = node.showCodeSnippet
                 contextLinesBefore = node.contextLinesBefore
                 contextLinesAfter = node.contextLinesAfter
+            }.also {
+                LOG.info("Converted node to serializable: $it")
             }
         }
         
         fun toBookmarkNode(serialNode: SerializableNode): BookmarkNode {
+            LOG.info("Converting serializable node to BookmarkNode: $serialNode")
             return BookmarkNode(
                 id = serialNode.id ?: "",
                 bookmarkId = serialNode.bookmarkId ?: "",
-                displayName = serialNode.displayName ?: "",
+                displayName = serialNode.displayName,
                 filePath = serialNode.filePath ?: "",
-                lineNumber = serialNode.lineNumber,
+                lineContent = serialNode.lineContent,
+                lineNumber0Based = serialNode.lineNumber,
                 positionX = serialNode.positionX,
                 positionY = serialNode.positionY,
                 width = serialNode.width,

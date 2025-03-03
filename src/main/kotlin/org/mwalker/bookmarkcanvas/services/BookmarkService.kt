@@ -1,19 +1,16 @@
 package org.mwalker.bookmarkcanvas.services
 
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
-import com.intellij.ide.bookmark.Bookmark
 import com.intellij.ide.bookmark.BookmarksManager
-import com.intellij.ide.bookmark.FileBookmark
 import com.intellij.ide.bookmark.LineBookmark
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 
 class BookmarkService {
     companion object {
+        private val LOG = Logger.getInstance(BookmarkService::class.java)
         fun createNodeFromCurrentPosition(project: Project): BookmarkNode? {
             val editor = FileEditorManager.getInstance(project).selectedTextEditor ?: return null
 
@@ -32,9 +29,9 @@ class BookmarkService {
 
             return BookmarkNode(
                 bookmarkId = "bookmark_" + System.currentTimeMillis(),
-                displayName = file.name + ":" + (line + 1),
+//                displayName = file.name + ":" + (line + 1),
                 filePath = filePath,
-                lineNumber = line,
+                lineNumber0Based = line,
                 lineContent = lineContent
             )
         }
@@ -47,6 +44,8 @@ class BookmarkService {
             } ?: return listOf()
 
             for (bookmark in bookmarks) {
+                LOG.info("Bookmark: $bookmark")
+                LOG.info("Bookmark attributes: ${bookmark.attributes}")
                 // Convert IDE bookmarks to our model
                 // This is a simplified version - you'll need to adapt to the actual IDE API
                 val filePath = bookmark.file.path.replace(project.basePath + "/", "")
@@ -66,10 +65,10 @@ class BookmarkService {
                 
                 val node = BookmarkNode(
                     bookmarkId = bookmark.toString(), // Or a unique ID
-//                    displayName = bookmark.description ?: (bookmark.file.name + ":" + bookmark.line), // Or file:line
-                    displayName = (bookmark.file.name + ":" + bookmark.line), // Or file:line
+//                    displayName = bookmark.description,
+//                    displayName = (bookmark.file.name + ":" + bookmark.line), // Or file:line
                     filePath = filePath,
-                    lineNumber = bookmark.line,
+                    lineNumber0Based = bookmark.line,
                     lineContent = lineContent
                 )
 

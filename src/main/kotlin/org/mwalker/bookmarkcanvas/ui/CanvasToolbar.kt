@@ -10,6 +10,13 @@ import java.awt.Dimension
 
 class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, true) {
     val canvasPanel: org.mwalker.bookmarkcanvas.ui.CanvasPanel
+    
+    /**
+     * Finds a NodeComponent by BookmarkNode id
+     */
+    fun findNodeComponent(nodeId: String): NodeComponent? {
+        return canvasPanel.nodeComponents[nodeId]
+    }
 
     init {
         // Create the canvas panel

@@ -100,6 +100,10 @@ class CanvasPanel(val project: Project) : JPanel() {
         }
     }
 
+    fun saveState() {
+        CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
+    }
+
     fun addNodeComponent(node: BookmarkNode) {
         nodeManager.addNodeComponent(node)
     }

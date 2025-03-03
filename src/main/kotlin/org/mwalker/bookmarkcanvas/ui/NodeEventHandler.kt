@@ -76,7 +76,7 @@ class NodeEventHandler(
     private fun createMouseAdapter(): MouseAdapter {
         return object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                LOG.info("Mouse pressed on node: ${node.displayName}, ${e.point}, " +
+                LOG.info("Mouse pressed on node: ${node.getDisplayText()}, ${e.point}, " +
                         "button: ${e.button}, clickCount: ${e.clickCount}, " +
                         "isPopupTrigger: ${e.isPopupTrigger}, " +
                         "isLeft: ${SwingUtilities.isLeftMouseButton(e)}, " + 
@@ -114,7 +114,7 @@ class NodeEventHandler(
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                LOG.info("Mouse released on node: ${node.displayName}, ${e.point}, " +
+                LOG.info("Mouse released on node: ${node.getDisplayText()}, ${e.point}, " +
                         "button: ${e.button}, clickCount: ${e.clickCount}, " +
                         "isPopupTrigger: ${e.isPopupTrigger}, " +
                         "isLeft: ${SwingUtilities.isLeftMouseButton(e)}, " + 
@@ -186,7 +186,7 @@ class NodeEventHandler(
             }
             
             override fun mouseClicked(e: MouseEvent) {
-                LOG.info("Mouse clicked on node: ${node.displayName}, ${e.point}, " +
+                LOG.info("Mouse clicked on node: ${node.getDisplayText()}, ${e.point}, " +
                         "button: ${e.button}, clickCount: ${e.clickCount}, " +
                         "isPopupTrigger: ${e.isPopupTrigger}, " +
                         "isLeft: ${SwingUtilities.isLeftMouseButton(e)}, " + 

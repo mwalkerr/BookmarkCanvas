@@ -100,7 +100,7 @@ class NodeContextMenuManager(
         val input = JOptionPane.showInputDialog(
             nodeComponent,
             "Enter new title:",
-            node.displayName
+            node.getDisplayText()
         )
 
         if (!input.isNullOrEmpty()) {
