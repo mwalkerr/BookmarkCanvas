@@ -133,6 +133,7 @@ data class BookmarkNode(
      * Normalizes the indentation of a code snippet so the minimum indentation level is 0
      */
     private fun normalizeIndentation(text: String): String {
+//        return text
         val lines = text.lines()
         if (lines.isEmpty()) return text
         

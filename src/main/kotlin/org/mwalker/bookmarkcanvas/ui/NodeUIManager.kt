@@ -21,6 +21,7 @@ import javax.swing.border.LineBorder
 import javax.swing.text.JTextComponent
 import com.intellij.ui.JBColor
 import org.mwalker.bookmarkcanvas.ui.CanvasColors
+import com.intellij.openapi.util.TextRange
 
 /**
  * Manages UI components for a NodeComponent
@@ -42,12 +43,39 @@ class NodeUIManager(
         // Absolute minimum sizes regardless of zoom factor to ensure visibility
         private const val MIN_VISIBLE_TITLE_SIZE = 6
         private const val MIN_VISIBLE_CODE_SIZE = 6
+        
+        // Cache for highlighted code snippets to avoid re-rendering
+        private val highlightedSnippetCache = mutableMapOf<String, KotlinSnippetHighlighter>()
+        
+        /**
+         * Invalidates the snippet cache for a specific node
+         */
+        fun invalidateSnippetCache(nodeId: String) {
+            val keysToRemove = highlightedSnippetCache.keys.filter { it.startsWith("$nodeId:") }
+            keysToRemove.forEach { highlightedSnippetCache.remove(it) }
+        }
+        
+        /**
+         * Invalidates the entire snippet cache
+         */
+        fun clearSnippetCache() {
+            highlightedSnippetCache.clear()
+        }
     }
     
     // Core UI components
     private lateinit var titleTextPane: JTextPane
     private lateinit var titlePanel: JPanel
     private var codeArea: JBTextArea? = null
+    
+    // Expose the highlighter as a property that can be accessed from NodeComponent
+    var highlightedSnippet: KotlinSnippetHighlighter? = null
+        private set
+    
+    // Generate a cache key for this node's code snippet
+    private fun getSnippetCacheKey(): String {
+        return "${node.id}:${node.filePath}:${node.lineNumber0Based}:${node.contextLinesBefore}:${node.contextLinesAfter}"
+    }
     
     /**
      * Initializes and returns the title panel component
@@ -94,40 +122,15 @@ class NodeUIManager(
      * Creates and returns the code snippet component
      */
     fun setupCodeSnippetView(parentContainer: JPanel): JPanel {
+        // Get the code snippet first
         val code = node.getCodeSnippet(project)
-        val newCodeArea = JBTextArea(code)
-        this.codeArea = newCodeArea
-
-        newCodeArea.isEditable = false
-        newCodeArea.isEnabled = false  // Prevent selection
-        newCodeArea.highlighter = null // Disable highlighting
-        newCodeArea.font = Font("Monospaced", Font.PLAIN, 12)
-        newCodeArea.background = CanvasColors.SNIPPET_BACKGROUND
-        newCodeArea.foreground = CanvasColors.SNIPPET_TEXT_COLOR
-        newCodeArea.caretColor = CanvasColors.SNIPPET_TEXT_COLOR
-        newCodeArea.lineWrap = true
-        newCodeArea.wrapStyleWord = true
-
-        // Ensure clicks on the text area propagate to the parent for dragging
-        newCodeArea.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
-            override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
-            override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
-        })
         
-        // Also handle mouse drags
-        newCodeArea.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
-            override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
-        })
-        
-        // Create content panel instead of scroll pane
+        // Create content panel first
         val contentPanel = JPanel(BorderLayout())
         contentPanel.background = CanvasColors.SNIPPET_BACKGROUND
         contentPanel.border = EmptyBorder(12, 12, 12, 12)  // Match GitHub style padding
-        contentPanel.add(newCodeArea, BorderLayout.CENTER)
-        contentPanel.setSize(200, 150)
-        contentPanel.preferredSize = Dimension(200, 150) // Keep for layout compatibility
+        contentPanel.setSize(250, 200)
+        contentPanel.preferredSize = Dimension(250, 200)
         
         // Apply event forwarding to the content panel
         contentPanel.addMouseListener(object : MouseAdapter() {
@@ -140,8 +143,128 @@ class NodeUIManager(
             override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
             override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
         })
+        
+        // Use the highlighter for any file - the editor will automatically use the appropriate highlighter
+        val useHighlighter = true
+        
+        if (useHighlighter) {
+            // Check cache first
+            val cacheKey = getSnippetCacheKey()
+            val cachedSnippet = highlightedSnippetCache[cacheKey]
+            
+            if (cachedSnippet != null) {
+                LOG.info("Using cached snippet for node: ${node.id}")
+                highlightedSnippet = cachedSnippet
+            } else {
+                LOG.info("Creating new snippet highlighter for node: ${node.id}")
+                // Create a new highlighter and cache it
+                val newHighlighter = KotlinSnippetHighlighter(project)
+                highlightedSnippet = newHighlighter
+                highlightedSnippetCache[cacheKey] = newHighlighter
+                
+                // For proper highlighting, we need the full document content
+                val fullCode = getFullDocumentContent(project, node.filePath)
+                
+                if (fullCode != null) {
+                    try {
+                        // Determine the range to highlight
+                        val startLine = maxOf(0, node.lineNumber0Based - node.contextLinesBefore)
+                        
+                        // Create a document to calculate offsets
+                        val document = com.intellij.openapi.editor.impl.DocumentImpl(fullCode)
+                        
+                        // Calculate offsets from line numbers
+                        val startOffset = if (document.lineCount > startLine) document.getLineStartOffset(startLine) else 0
+                        val endLine = minOf(document.lineCount - 1, node.lineNumber0Based + node.contextLinesAfter)
+                        val endOffset = if (document.lineCount > endLine) document.getLineEndOffset(endLine) else fullCode.length
+                        
+                        // Get the file extension for proper syntax highlighting
+                        val extension = node.filePath.substringAfterLast('.', "txt")
+                        
+                        // Display the highlighted snippet with the appropriate file type
+                        newHighlighter.displayHighlightedSnippet(fullCode, TextRange(startOffset, endOffset), extension)
+                    } catch (e: Exception) {
+                        LOG.error("Error highlighting snippet", e)
+                        newHighlighter.displayPlainText(code)
+                    }
+                } else {
+                    // Fallback to plain text
+                    newHighlighter.displayPlainText(code)
+                }
+            }
+            
+            // Add mouse event forwarding to the highlighter component as well
+            highlightedSnippet?.let { snippet ->
+                snippet.addMouseListener(object : MouseAdapter() {
+                    override fun mousePressed(e: MouseEvent) = forwardMouseEvent(snippet, e, nodeComponent)
+                    override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(snippet, e, nodeComponent)
+                    override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(snippet, e, nodeComponent)
+                })
+                
+                snippet.addMouseMotionListener(object : MouseMotionAdapter() {
+                    override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(snippet, e, nodeComponent)
+                    override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(snippet, e, nodeComponent)
+                })
+                
+                // Add the highlighter to the content panel
+                contentPanel.add(snippet, BorderLayout.CENTER)
+            }
+        } else {
+            // Fallback to regular code display with JBTextArea
+            val fallbackCodeArea = JBTextArea(code)
+            this.codeArea = fallbackCodeArea
+            fallbackCodeArea.isEditable = false
+            fallbackCodeArea.isEnabled = false  // Prevent selection
+            fallbackCodeArea.highlighter = null // Disable highlighting
+            fallbackCodeArea.font = Font("Monospaced", Font.PLAIN, 12)
+            fallbackCodeArea.background = CanvasColors.SNIPPET_BACKGROUND
+            fallbackCodeArea.foreground = CanvasColors.SNIPPET_TEXT_COLOR
+            fallbackCodeArea.caretColor = CanvasColors.SNIPPET_TEXT_COLOR
+            fallbackCodeArea.lineWrap = true
+            fallbackCodeArea.wrapStyleWord = true
+            
+            // Add the text area to the content panel
+            contentPanel.add(fallbackCodeArea, BorderLayout.CENTER)
+            
+            // Ensure clicks on the text area propagate to the parent for dragging
+            fallbackCodeArea.addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) = forwardMouseEvent(fallbackCodeArea, e, nodeComponent)
+                override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(fallbackCodeArea, e, nodeComponent)
+                override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(fallbackCodeArea, e, nodeComponent)
+            })
+            
+            // Also handle mouse drags
+            fallbackCodeArea.addMouseMotionListener(object : MouseMotionAdapter() {
+                override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(fallbackCodeArea, e, nodeComponent)
+                override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(fallbackCodeArea, e, nodeComponent)
+            })
+        }
 
         return contentPanel
+    }
+    
+    /**
+     * Gets the full document content for proper syntax highlighting
+     */
+    private fun getFullDocumentContent(project: Project, filePath: String): String? {
+        return kotlin.runCatching {
+            // Handle both absolute paths and project-relative paths
+            val file = if (filePath.startsWith("/") || filePath.contains(":\\")) {
+                // Absolute path
+                com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath)
+            } else {
+                // Project-relative path
+                project.baseDir.findFileByRelativePath(filePath)
+            } ?: return@runCatching null
+
+            val psiFile = com.intellij.psi.PsiManager.getInstance(project).findFile(file)
+                ?: return@runCatching null
+
+            val document = psiFile.viewProvider.document
+                ?: return@runCatching null
+                
+            document.text
+        }.getOrNull()
     }
     
     /**
@@ -165,7 +288,7 @@ class NodeUIManager(
         titleTextPane.invalidate()
         titleTextPane.validate()
         
-        // Update code area font if present
+        // Update code area font if present (legacy support)
         codeArea?.let { area ->
             val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_CODE_SIZE)
             val newCodeFont = Font("Monospaced", Font.PLAIN, scaledCodeSize)
@@ -175,6 +298,14 @@ class NodeUIManager(
             // Force the code area to update as well
             area.invalidate()
             area.validate()
+        }
+        
+        // Update highlighted snippet if present
+        highlightedSnippet?.let { snippet ->
+            // The snippet will use its own internal zoom updating mechanism
+            snippet.updateZoomFactor(zoomFactor)
+            snippet.invalidate()
+            snippet.validate()
         }
     }
     

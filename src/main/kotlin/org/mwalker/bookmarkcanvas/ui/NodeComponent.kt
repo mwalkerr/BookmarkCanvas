@@ -52,6 +52,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         set(value) {
             if (field != value) {
                 field = value
+                // Propagate selection to the highlighter if it exists
+                uiManager.highlightedSnippet?.setSelected(value)
                 repaint()
             }
         }
