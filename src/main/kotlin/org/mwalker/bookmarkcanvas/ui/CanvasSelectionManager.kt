@@ -31,6 +31,8 @@ class CanvasSelectionManager(
         if (canvasPanel.selectionStart == null || canvasPanel.selectionEnd == null) return
         
         val rect = getSelectionRectangle()
+        val previouslySelectedCount = canvasPanel.selectedNodes.size
+        val initiallySelected = HashSet(canvasPanel.selectedNodes)
         
         // Select all nodes that intersect with the selection rectangle
         for (nodeComp in canvasPanel.nodeComponents.values) {
@@ -39,7 +41,21 @@ class CanvasSelectionManager(
             if (rect.intersects(nodeBounds)) {
                 canvasPanel.selectedNodes.add(nodeComp)
                 nodeComp.isSelected = true
+            }
+        }
+        
+        // If selection changed from single to multi or vice versa, repaint all selected nodes
+        if ((previouslySelectedCount == 1 && canvasPanel.selectedNodes.size > 1) || 
+            (previouslySelectedCount > 1 && canvasPanel.selectedNodes.size == 1)) {
+            for (nodeComp in canvasPanel.selectedNodes) {
                 nodeComp.repaint()
+            }
+        } else {
+            // Otherwise, just repaint newly selected nodes
+            for (nodeComp in canvasPanel.selectedNodes) {
+                if (!initiallySelected.contains(nodeComp)) {
+                    nodeComp.repaint()
+                }
             }
         }
     }

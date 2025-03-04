@@ -53,7 +53,11 @@ object CanvasColors {
     )
     val SELECTION_BORDER_COLOR = JBColor(
         Color(0, 120, 215),   // Light mode
-        Color(48, 54, 61)     // Dark mode - GitHub dark: #30363d
+        Color(0, 180, 100),   // Dark mode - greenish blue
+    )
+    val GROUP_SELECTION_BORDER_COLOR = JBColor(
+        Color(0, 180, 100),   // Light mode - greenish blue
+        Color(88, 166, 124)   // Dark mode - subtle green
     )
     val SELECTION_HEADER_COLOR = JBColor(
         Color(210, 230, 255), // Light mode

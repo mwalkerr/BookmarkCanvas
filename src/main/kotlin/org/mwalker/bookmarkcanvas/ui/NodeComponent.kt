@@ -57,6 +57,13 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
                 repaint()
             }
         }
+    
+    // Track if the node is part of a group selection
+    var isPartOfSelectionGroup = false
+        get() = isSelected && SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)?.let {
+            val panel = it as CanvasPanel
+            panel.selectedNodes.size > 1
+        } ?: false
 
     init {
         // Basic panel setup
@@ -239,10 +246,24 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         
         // Only draw selection border if selected (no longer draw header highlight)
         if (isSelected) {
-            // Draw selection border
-            g2d.color = CanvasColors.SELECTION_BORDER_COLOR
-            g2d.stroke = BasicStroke(2.0f)
+
+            // Choose border color based on whether this is part of a multi-node selection
+            g2d.color = if (isPartOfSelectionGroup) {
+                CanvasColors.GROUP_SELECTION_BORDER_COLOR
+            } else {
+                CanvasColors.SELECTION_BORDER_COLOR
+            }
+            border = CompoundBorder(
+                LineBorder(g2d.color, 2, true),
+                EmptyBorder(0, 0, 0, 0)
+            )
+            g2d.stroke = BasicStroke(4.0f)
             g2d.drawRect(1, 1, width - 3, height - 3)
+        } else {
+            border = CompoundBorder(
+                LineBorder(CanvasColors.BORDER_COLOR, 2, true),
+                EmptyBorder(0, 0, 0, 0)
+            )
         }
         
         // Draw resize handle

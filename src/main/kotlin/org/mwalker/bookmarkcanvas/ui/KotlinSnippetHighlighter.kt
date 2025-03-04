@@ -272,17 +272,10 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
         
         // Create a border based on selection state
         private fun createBorder(selected: Boolean): javax.swing.border.Border {
-            return if (selected) {
-                javax.swing.BorderFactory.createCompoundBorder(
-                    javax.swing.BorderFactory.createLineBorder(org.mwalker.bookmarkcanvas.ui.CanvasColors.SELECTION_BORDER_COLOR, 2),
-                    javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5)
-                )
-            } else {
-                javax.swing.BorderFactory.createCompoundBorder(
-                    javax.swing.BorderFactory.createLineBorder(org.mwalker.bookmarkcanvas.ui.CanvasColors.BORDER_COLOR, 1),
-                    javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5)
-                )
-            }
+            return javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(org.mwalker.bookmarkcanvas.ui.CanvasColors.BORDER_COLOR, 1),
+                javax.swing.BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            )
         }
 
         init {
