@@ -234,9 +234,18 @@ class CanvasPanel(val project: Project) : JPanel() {
      * Check if we need to regenerate the grid cache
      */
     private fun needToRegenerateGridCache(): Boolean {
+        // Only check if grid is being shown
+        if (!showGrid) return false
+        
+        // If no cache exists, we need to generate it
         if (gridCache == null) return true
+        
+        // If zoom changed, we need to regenerate
         if (gridCacheZoom != zoomFactor) return true
+        
+        // If panel size increased beyond cache size, regenerate
         if (gridCacheSize.width < width || gridCacheSize.height < height) return true
+        
         return false
     }
     

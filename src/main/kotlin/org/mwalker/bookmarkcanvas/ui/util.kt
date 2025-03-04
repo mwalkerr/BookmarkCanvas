@@ -94,7 +94,8 @@ fun drawResizeHandle(g2d: Graphics2D, componentWidth: Int, componentHeight: Int,
  */
 class EventThrottler(private val delayMs: Long = 16) { // ~60fps by default
     private var lastExecutionTime: Long = 0
-    private var pendingRunnable: Runnable? = null
+    private var pendingActionScheduled = false
+    private var pendingAction: (() -> Unit)? = null
     
     /**
      * Throttles the execution of the provided action
@@ -111,19 +112,30 @@ class EventThrottler(private val delayMs: Long = 16) { // ~60fps by default
             return true
         }
         
-        // Otherwise, cancel any pending execution and schedule a new one
-        pendingRunnable?.let { SwingUtilities.invokeLater { pendingRunnable = null } }
+        // Store the latest action
+        pendingAction = action
         
-        // Create a new runnable for this action
-        pendingRunnable = Runnable {
-            action()
-            lastExecutionTime = System.currentTimeMillis()
-            pendingRunnable = null
+        // If we've already scheduled an action, don't schedule another one
+        if (pendingActionScheduled) {
+            return false
         }
         
-        // Schedule for later execution
+        // Mark that we've scheduled an action
+        pendingActionScheduled = true
+        
+        // Schedule for later execution - only one invokeLater per throttle window
         SwingUtilities.invokeLater { 
-            pendingRunnable?.run() 
+            // Reset the scheduled flag
+            pendingActionScheduled = false
+            
+            // Get the latest action and clear the reference
+            pendingAction?.let { 
+                it()
+                lastExecutionTime = System.currentTimeMillis()
+            }
+            
+            // Clear the pending action
+            pendingAction = null
         }
         
         return false
@@ -133,6 +145,8 @@ class EventThrottler(private val delayMs: Long = 16) { // ~60fps by default
      * Clear any pending throttled actions
      */
     fun clear() {
-        pendingRunnable = null
+        pendingAction = null
+        // We don't cancel the scheduled invokeLater, but it will do nothing
+        // since pendingAction will be null when it runs
     }
 }

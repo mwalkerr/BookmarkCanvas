@@ -47,7 +47,7 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
         mainPanel = JPanel(BorderLayout())
         resultArea = JTextArea()
         resultArea!!.isEditable = false
-        background = EditorColorsManager.getInstance().globalScheme.defaultBackground
+        background = EditorColorsManager.getInstance().getSchemeForCurrentUITheme().defaultBackground
         border = javax.swing.BorderFactory.createLineBorder(org.mwalker.bookmarkcanvas.ui.CanvasColors.BORDER_COLOR, 1)
 
         mainPanel!!.add(JBScrollPane(resultArea), BorderLayout.CENTER)
@@ -62,8 +62,9 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
             resultArea = JTextArea()
             resultArea!!.isEditable = false
             resultArea!!.font = Font("Monospaced", Font.PLAIN, 12)
-            resultArea!!.background = EditorColorsManager.getInstance().globalScheme.defaultBackground
-            resultArea!!.foreground = EditorColorsManager.getInstance().globalScheme.defaultForeground
+            val currentScheme = EditorColorsManager.getInstance().getSchemeForCurrentUITheme()
+            resultArea!!.background = currentScheme.defaultBackground
+            resultArea!!.foreground = currentScheme.defaultForeground
             resultArea!!.lineWrap = true
             resultArea!!.wrapStyleWord = true
         }
@@ -127,22 +128,24 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
         val editorFactory = EditorFactory.getInstance()
         val document = editorFactory.createDocument(fullKotlinCode ?: "")
 
-        // Get the current editor color scheme
-        val colorsScheme = EditorColorsManager.getInstance().globalScheme
+        // Get the project's active editor color scheme instead of the global one
+        val colorsScheme = EditorColorsManager.getInstance().getSchemeForCurrentUITheme()
         currentColorsScheme = colorsScheme
 
         val editor = editorFactory.createEditor(document, project) as EditorEx
         editor.foldingModel.isFoldingEnabled = false
 
         try {
-            // Apply the current color scheme
+            // Apply the active color scheme
             editor.colorsScheme = colorsScheme
 
             // Set up the editor for the appropriate file type 
             editor.highlighter = EditorHighlighterFactory.getInstance().createEditorHighlighter(
-                project, "file.$fileExtension"
+                colorsScheme,
+                "file.$fileExtension",
+                        project,
             )
-            
+
             // First get all the segments from the editor for the entire snippetRange
             val allSegments = extractHighlightedSegments(editor, snippetRange)
             
@@ -177,7 +180,7 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
                 val normalizedEditor = editorFactory.createEditor(normalizedDocument, project) as EditorEx
                 
                 try {
-                    // Apply the same settings to this editor
+                    // Apply the same active color scheme settings to this editor
                     normalizedEditor.colorsScheme = colorsScheme
                     normalizedEditor.highlighter = EditorHighlighterFactory.getInstance().createEditorHighlighter(
                         project, "file.$fileExtension"

@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import org.mwalker.bookmarkcanvas.ui.CanvasColors
+import org.mwalker.bookmarkcanvas.ui.CanvasConstants
 import com.intellij.ui.components.JBLabel
 import java.awt.*
 import java.awt.event.*
@@ -30,11 +31,12 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
     
     private val LOG = Logger.getInstance(NodeComponent::class.java)
     
-    // Constants
+    // Constants from CanvasConstants
     companion object {
-        private const val RESIZE_HANDLE_SIZE = 10
-        private const val TITLE_PADDING = 8
-        private const val CONTENT_PADDING = 12
+        // Use centralized constants
+        private val RESIZE_HANDLE_SIZE = CanvasConstants.RESIZE_HANDLE_SIZE
+        private val TITLE_PADDING = CanvasConstants.TITLE_PADDING
+        private val CONTENT_PADDING = CanvasConstants.CONTENT_PADDING
     }
     
     // Core UI components
@@ -60,10 +62,17 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
     
     // Track if the node is part of a group selection
     var isPartOfSelectionGroup = false
-        get() = isSelected && SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)?.let {
-            val panel = it as CanvasPanel
-            panel.selectedNodes.size > 1
-        } ?: false
+        get() {
+            // Only compute this if the node is actually selected
+            if (!isSelected) return false
+            
+            // Cache the parent panel to avoid repeated lookups
+            val parentRef = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, this)
+            if (parentRef == null) return false
+            
+            val panel = parentRef as CanvasPanel
+            return panel.selectedNodes.size > 1
+        }
 
     init {
         // Basic panel setup
@@ -237,6 +246,24 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         }
     }
     
+    // Cache borders to avoid recreating them on every paint
+    private val normalBorder = CompoundBorder(
+        LineBorder(CanvasColors.BORDER_COLOR, 2, true),
+        EmptyBorder(0, 0, 0, 0)
+    )
+    private val selectionBorder = CompoundBorder(
+        LineBorder(CanvasColors.SELECTION_BORDER_COLOR, 2, true),
+        EmptyBorder(0, 0, 0, 0)
+    )
+    private val groupSelectionBorder = CompoundBorder(
+        LineBorder(CanvasColors.GROUP_SELECTION_BORDER_COLOR, 2, true),
+        EmptyBorder(0, 0, 0, 0)
+    )
+    
+    // Last known selection state to avoid unnecessary border changes
+    private var lastKnownSelectionState = false
+    private var lastKnownGroupSelectionState = false
+    
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val g2d = g.create() as Graphics2D
@@ -244,26 +271,44 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Set rendering hints for smoother lines
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         
-        // Only draw selection border if selected (no longer draw header highlight)
-        if (isSelected) {
-
-            // Choose border color based on whether this is part of a multi-node selection
-            g2d.color = if (isPartOfSelectionGroup) {
+        // Only update the border if selection state has changed
+        val isPartOfGroup = isPartOfSelectionGroup
+        if (isSelected != lastKnownSelectionState || 
+            (isSelected && isPartOfGroup != lastKnownGroupSelectionState)) {
+            
+            // Update border based on selection state
+            if (isSelected) {
+                // Choose border based on whether this is part of a multi-node selection
+                border = if (isPartOfGroup) {
+                    groupSelectionBorder
+                } else {
+                    selectionBorder
+                }
+                
+                // Draw additional highlight
+                g2d.color = if (isPartOfGroup) {
+                    CanvasColors.GROUP_SELECTION_BORDER_COLOR
+                } else {
+                    CanvasColors.SELECTION_BORDER_COLOR
+                }
+                g2d.stroke = BasicStroke(4.0f)
+                g2d.drawRect(1, 1, width - 3, height - 3)
+            } else {
+                border = normalBorder
+            }
+            
+            // Update cached states
+            lastKnownSelectionState = isSelected
+            lastKnownGroupSelectionState = isPartOfGroup
+        } else if (isSelected) {
+            // Always draw the highlight for selected nodes
+            g2d.color = if (isPartOfGroup) {
                 CanvasColors.GROUP_SELECTION_BORDER_COLOR
             } else {
                 CanvasColors.SELECTION_BORDER_COLOR
             }
-            border = CompoundBorder(
-                LineBorder(g2d.color, 2, true),
-                EmptyBorder(0, 0, 0, 0)
-            )
             g2d.stroke = BasicStroke(4.0f)
             g2d.drawRect(1, 1, width - 3, height - 3)
-        } else {
-            border = CompoundBorder(
-                LineBorder(CanvasColors.BORDER_COLOR, 2, true),
-                EmptyBorder(0, 0, 0, 0)
-            )
         }
         
         // Draw resize handle

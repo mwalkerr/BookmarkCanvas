@@ -23,6 +23,7 @@ class CanvasEventHandler(
     private val panningThrottler = EventThrottler(16) // ~60fps
     private val nodeDragThrottler = EventThrottler(16) // ~60fps
     private val connectionThrottler = EventThrottler(16) // ~60fps
+    private val mouseMoveThrottler = EventThrottler(50) // Lower frequency for mouse moves
     
     /**
      * Checks if a modifier key (Ctrl/Cmd) is pressed
@@ -218,11 +219,14 @@ class CanvasEventHandler(
             }
             
             override fun mouseMoved(e: MouseEvent) {
-                // Change cursor based on modifier key
-                if (isModifierKeyDown(e) && e.source == canvasPanel) {
-                    canvasPanel.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
-                } else {
-                    canvasPanel.cursor = Cursor.getDefaultCursor()
+                // Throttle mouse move events to reduce CPU usage
+                mouseMoveThrottler.throttle {
+                    // Change cursor based on modifier key
+                    if (isModifierKeyDown(e) && e.source == canvasPanel) {
+                        canvasPanel.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
+                    } else {
+                        canvasPanel.cursor = Cursor.getDefaultCursor()
+                    }
                 }
             }
         }

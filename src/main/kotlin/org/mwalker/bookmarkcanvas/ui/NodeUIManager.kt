@@ -21,6 +21,7 @@ import javax.swing.border.LineBorder
 import javax.swing.text.JTextComponent
 import com.intellij.ui.JBColor
 import org.mwalker.bookmarkcanvas.ui.CanvasColors
+import org.mwalker.bookmarkcanvas.ui.CanvasConstants
 import com.intellij.openapi.util.TextRange
 
 /**
@@ -33,16 +34,17 @@ class NodeUIManager(
 ) {
     private val LOG = Logger.getInstance(NodeUIManager::class.java)
     
-    // Constants
+    // Constants from CanvasConstants
     companion object {
-        private const val TITLE_PADDING = 8
-        private const val CONTENT_PADDING = 12
-        private const val BASE_TITLE_FONT_SIZE = 12
-        private const val BASE_CODE_FONT_SIZE = 12
+        // Use centralized constants
+        private val TITLE_PADDING = CanvasConstants.TITLE_PADDING
+        private val CONTENT_PADDING = CanvasConstants.CONTENT_PADDING
+        private val BASE_TITLE_FONT_SIZE = CanvasConstants.BASE_TITLE_FONT_SIZE
+        private val BASE_CODE_FONT_SIZE = CanvasConstants.BASE_CODE_FONT_SIZE
         
         // Absolute minimum sizes regardless of zoom factor to ensure visibility
-        private const val MIN_VISIBLE_TITLE_SIZE = 6
-        private const val MIN_VISIBLE_CODE_SIZE = 6
+        private val MIN_VISIBLE_TITLE_SIZE = CanvasConstants.MIN_VISIBLE_TITLE_SIZE
+        private val MIN_VISIBLE_CODE_SIZE = CanvasConstants.MIN_VISIBLE_CODE_SIZE
         
         // Cache for highlighted code snippets to avoid re-rendering
         private val highlightedSnippetCache = mutableMapOf<String, KotlinSnippetHighlighter>()
@@ -86,6 +88,12 @@ class NodeUIManager(
             override fun contains(x: Int, y: Int): Boolean {
                 return false // Make transparent to mouse events
             }
+            
+            // Override UI painting methods to ensure colors are always correct
+            override fun setForeground(fg: Color?) {
+                super.setForeground(CanvasColors.NODE_TEXT_COLOR)
+                document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
+            }
         }.apply {
             text = node.getDisplayText()
             foreground = CanvasColors.NODE_TEXT_COLOR
@@ -128,7 +136,7 @@ class NodeUIManager(
         // Create content panel first
         val contentPanel = JPanel(BorderLayout())
         contentPanel.background = CanvasColors.SNIPPET_BACKGROUND
-        contentPanel.border = EmptyBorder(12, 12, 12, 12)  // Match GitHub style padding
+        contentPanel.border = EmptyBorder(CONTENT_PADDING, CONTENT_PADDING, CONTENT_PADDING, CONTENT_PADDING)
         contentPanel.setSize(250, 200)
         contentPanel.preferredSize = Dimension(250, 200)
         
@@ -279,10 +287,13 @@ class NodeUIManager(
         val currentFont = titleTextPane.font
         val newFont = currentFont.deriveFont(Font.BOLD, scaledTitleSize.toFloat())
         
-        // Apply the new font and make sure color is set properly
+        // Apply the new font and make sure colors are set properly
         titleTextPane.font = newFont
         titleTextPane.foreground = CanvasColors.NODE_TEXT_COLOR
         titleTextPane.document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
+        
+        // Ensure title panel background color is correctly set too
+        titlePanel.background = CanvasColors.SELECTION_HEADER_COLOR
         
         // After adjusting font, ensure it's visible by forcing display update
         titleTextPane.invalidate()
@@ -388,11 +399,16 @@ class NodeUIManager(
     }
     
     /**
-     * Updates the title text
+     * Updates the title text and ensures colors are properly applied
      */
     fun updateTitle(title: String) {
         titleTextPane.text = title
+        
+        // Ensure colors are properly applied
         titleTextPane.foreground = CanvasColors.NODE_TEXT_COLOR
         titleTextPane.document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
+        
+        // Make sure title panel has proper background color
+        titlePanel.background = CanvasColors.SELECTION_HEADER_COLOR
     }
 }

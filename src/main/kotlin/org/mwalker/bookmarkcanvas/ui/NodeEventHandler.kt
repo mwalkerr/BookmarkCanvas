@@ -96,8 +96,8 @@ class NodeEventHandler(
                         isResizing = true
                         dragStart = e.point
                         e.consume() // Consume the event so it doesn't propagate
-                    } else if (canvas.selectedNodes.contains(nodeComponent)) {
-                        // If we're part of a selection group, forward the event to the canvas
+                    } else if (canvas.selectedNodes.contains(nodeComponent) && canvas.selectedNodes.size > 1) {
+                        // If we're part of a multi-selection group, forward the event to the canvas
                         forwardMouseEvent(nodeComponent, e, canvas)
                     } else {
                         // Individual dragging
@@ -152,8 +152,8 @@ class NodeEventHandler(
                     
                     isDragging = false
                     isResizing = false
-                } else if (canvas.selectedNodes.contains(nodeComponent)) {
-                    // If we're part of a selection group, forward the event to the canvas
+                } else if (canvas.selectedNodes.contains(nodeComponent) && canvas.selectedNodes.size > 1) {
+                    // If we're part of a multi-selection group, forward the event to the canvas
                     forwardMouseEvent(nodeComponent, e, canvas)
                 } else if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger) {
                     // Check if this is a connection creation
