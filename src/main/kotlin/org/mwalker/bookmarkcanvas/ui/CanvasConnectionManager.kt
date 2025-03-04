@@ -1,10 +1,10 @@
 package org.mwalker.bookmarkcanvas.ui
 
 import com.intellij.openapi.project.Project
-import com.intellij.ui.JBColor
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.NodeConnection
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
+import org.mwalker.bookmarkcanvas.ui.CanvasColors
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Graphics2D
@@ -75,7 +75,7 @@ class CanvasConnectionManager(
             startNode.x + startNode.width / 2,
             startNode.y + startNode.height / 2
         )
-        g2d.color = JBColor.GRAY
+        g2d.color = CanvasColors.CONNECTION_COLOR
         g2d.stroke = BasicStroke(
             2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
             0f, floatArrayOf(5f), 0f

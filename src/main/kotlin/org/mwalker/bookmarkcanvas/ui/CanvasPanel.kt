@@ -5,7 +5,7 @@ import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
 import com.intellij.openapi.project.Project
-import com.intellij.ui.JBColor
+import org.mwalker.bookmarkcanvas.ui.CanvasColors
 import java.awt.*
 import java.awt.event.*
 import javax.swing.*
@@ -43,24 +43,6 @@ class CanvasPanel(val project: Project) : JPanel() {
     
     companion object {
         private val LOG = Logger.getInstance(NodeComponent::class.java)
-
-        // UI Colors
-        val CANVAS_BACKGROUND = JBColor(
-            Color(240, 240, 240), // Light mode
-            Color(30, 30, 30) // Dark mode
-        )
-        val GRID_COLOR = JBColor(
-            Color(210, 210, 210), // Light mode
-            Color(50, 50, 50) // Dark mode
-        )
-        val SELECTION_BOX_COLOR = JBColor(
-            Color(100, 150, 255, 50), // Light mode with transparency
-            Color(80, 120, 200, 50) // Dark mode with transparency
-        )
-        val SELECTION_BOX_BORDER_COLOR = JBColor(
-            Color(70, 130, 230), // Light mode
-            Color(100, 150, 230) // Dark mode
-        )
     }
     
     // Cached grid for performance
@@ -75,7 +57,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         _zoomFactor = canvasState.zoomFactor
         
         layout = null // Free positioning
-        background = CANVAS_BACKGROUND
+        background = CanvasColors.CANVAS_BACKGROUND
 
         // Initialize managers
         nodeManager = CanvasNodeManager(this, project)
@@ -272,12 +254,12 @@ class CanvasPanel(val project: Project) : JPanel() {
         val cache = createImage(cacheWidth, cacheHeight)
         val g2d = cache.graphics as Graphics2D
         
-        // Fill background (may not be necessary if canvas is opaque)
-        g2d.color = background
+        // Fill background with explicit grid background color
+        g2d.color = CanvasColors.GRID_BACKGROUND
         g2d.fillRect(0, 0, cacheWidth, cacheHeight)
         
         // Draw the grid lines
-        g2d.color = GRID_COLOR
+        g2d.color = CanvasColors.GRID_COLOR
         
         // Draw vertical lines
         var x = 0

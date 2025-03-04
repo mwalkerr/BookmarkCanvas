@@ -1,6 +1,5 @@
 package org.mwalker.bookmarkcanvas.ui
 
-import com.intellij.ui.JBColor
 import java.awt.Color
 import java.awt.Component
 import java.awt.Font
@@ -88,31 +87,6 @@ fun drawResizeHandle(g2d: Graphics2D, componentWidth: Int, componentHeight: Int,
     }
 }
 
-/**
- * Common UI colors for consistent appearance across components
- */
-object UIColors {
-    val NODE_BACKGROUND = JBColor(
-        Color(250, 250, 250), // Light mode
-        Color(43, 43, 43),    // Dark mode
-    )
-    val NODE_TEXT_COLOR = JBColor(
-        Color(0, 0, 0),        // Light mode
-        Color(187, 187, 187),  // Dark mode
-    )
-    val RESIZE_HANDLE_COLOR = JBColor(
-        Color(180, 180, 180),  // Light mode
-        Color(100, 100, 100),  // Dark mode
-    )
-    val SELECTION_BORDER_COLOR = JBColor(
-        Color(0, 120, 215),    // Light mode
-        Color(75, 110, 175)    // Dark mode
-    )
-    val SELECTION_HEADER_COLOR = JBColor(
-        Color(210, 230, 255),  // Light mode
-        Color(45, 65, 100)     // Dark mode
-    )
-}
 
 /**
  * Utility class to throttle frequent events like mouse movements and drags

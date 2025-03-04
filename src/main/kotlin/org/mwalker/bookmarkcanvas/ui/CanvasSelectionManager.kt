@@ -5,6 +5,7 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.RenderingHints
+import org.mwalker.bookmarkcanvas.ui.CanvasColors
 
 /**
  * Manages selection behavior on the canvas
@@ -65,11 +66,11 @@ class CanvasSelectionManager(
         val rect = getSelectionRectangle()
         
         // Fill with semi-transparent color
-        g2d.color = CanvasPanel.SELECTION_BOX_COLOR
+        g2d.color = CanvasColors.SELECTION_BOX_COLOR
         g2d.fill(rect)
         
         // Draw border
-        g2d.color = CanvasPanel.SELECTION_BOX_BORDER_COLOR
+        g2d.color = CanvasColors.SELECTION_BOX_BORDER_COLOR
         g2d.stroke = BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
         g2d.draw(rect)
         

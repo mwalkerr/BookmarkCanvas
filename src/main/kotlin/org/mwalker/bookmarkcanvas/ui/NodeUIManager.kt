@@ -19,6 +19,7 @@ import javax.swing.border.EmptyBorder
 import javax.swing.border.LineBorder
 import javax.swing.text.JTextComponent
 import com.intellij.ui.JBColor
+import org.mwalker.bookmarkcanvas.ui.CanvasColors
 
 /**
  * Manages UI components for a NodeComponent
@@ -58,8 +59,8 @@ class NodeUIManager(
             }
         }.apply {
             text = node.getDisplayText()
-            foreground = UIColors.NODE_TEXT_COLOR
-            document.putProperty("ForegroundColor", UIColors.NODE_TEXT_COLOR)
+            foreground = CanvasColors.NODE_TEXT_COLOR
+            document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
             font = font.deriveFont(Font.BOLD)
             isEditable = false
             isOpaque = false
@@ -90,9 +91,9 @@ class NodeUIManager(
         newCodeArea.isEnabled = false  // Prevent selection
         newCodeArea.highlighter = null // Disable highlighting
         newCodeArea.font = Font("Monospaced", Font.PLAIN, 12)
-        newCodeArea.background = UIColors.NODE_BACKGROUND
-        newCodeArea.foreground = UIColors.NODE_TEXT_COLOR
-        newCodeArea.caretColor = UIColors.NODE_TEXT_COLOR
+        newCodeArea.background = CanvasColors.SNIPPET_BACKGROUND
+        newCodeArea.foreground = CanvasColors.SNIPPET_TEXT_COLOR
+        newCodeArea.caretColor = CanvasColors.SNIPPET_TEXT_COLOR
 
         // Ensure clicks on the text area propagate to the parent for dragging
         newCodeArea.addMouseListener(object : MouseAdapter() {
@@ -111,7 +112,7 @@ class NodeUIManager(
         val scrollPane = JBScrollPane(newCodeArea)
         scrollPane.setSize(200, 150)
         scrollPane.preferredSize = Dimension(200, 150) // Keep for layout compatibility
-        scrollPane.border = LineBorder(JBColor.border(), 1)
+        scrollPane.border = LineBorder(CanvasColors.BORDER_COLOR, 1)
         
         // Also apply the same event forwarding to the scroll pane
         scrollPane.addMouseListener(object : MouseAdapter() {
@@ -142,8 +143,8 @@ class NodeUIManager(
         
         // Apply the new font and make sure color is set properly
         titleTextPane.font = newFont
-        titleTextPane.foreground = UIColors.NODE_TEXT_COLOR
-        titleTextPane.document.putProperty("ForegroundColor", UIColors.NODE_TEXT_COLOR)
+        titleTextPane.foreground = CanvasColors.NODE_TEXT_COLOR
+        titleTextPane.document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
         
         // After adjusting font, ensure it's visible by forcing display update
         titleTextPane.invalidate()
@@ -154,7 +155,7 @@ class NodeUIManager(
             val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_CODE_SIZE)
             val newCodeFont = Font("Monospaced", Font.PLAIN, scaledCodeSize)
             area.font = newCodeFont
-            area.foreground = UIColors.NODE_TEXT_COLOR // Ensure text color is visible
+            area.foreground = CanvasColors.SNIPPET_TEXT_COLOR // Ensure text color is visible
             
             // Force the code area to update as well
             area.invalidate()
@@ -245,7 +246,7 @@ class NodeUIManager(
      */
     fun updateTitle(title: String) {
         titleTextPane.text = title
-        titleTextPane.foreground = UIColors.NODE_TEXT_COLOR
-        titleTextPane.document.putProperty("ForegroundColor", UIColors.NODE_TEXT_COLOR)
+        titleTextPane.foreground = CanvasColors.NODE_TEXT_COLOR
+        titleTextPane.document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
     }
 }

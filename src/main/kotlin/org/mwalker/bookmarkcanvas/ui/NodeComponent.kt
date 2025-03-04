@@ -5,6 +5,7 @@ import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
+import org.mwalker.bookmarkcanvas.ui.CanvasColors
 import com.intellij.ui.components.JBLabel
 import java.awt.*
 import java.awt.event.*
@@ -59,10 +60,10 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Basic panel setup
         layout = BorderLayout()
         border = CompoundBorder(
-            LineBorder(JBColor.border(), 1, true),
+            LineBorder(CanvasColors.BORDER_COLOR, 1, true),
             EmptyBorder(TITLE_PADDING, CONTENT_PADDING, TITLE_PADDING, CONTENT_PADDING)
         )
-        background = UIColors.NODE_BACKGROUND
+        background = CanvasColors.NODE_BACKGROUND
         
         // Initialize UI manager and create title components
         uiManager = NodeUIManager(this, node, project)
@@ -247,17 +248,17 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         if (isSelected) {
             // Draw title background highlight
             val headerRect = Rectangle(0, 0, width, titlePanel.height + TITLE_PADDING)
-            g2d.color = UIColors.SELECTION_HEADER_COLOR
+            g2d.color = CanvasColors.SELECTION_HEADER_COLOR
             g2d.fill(headerRect)
             
             // Draw selection border
-            g2d.color = UIColors.SELECTION_BORDER_COLOR
+            g2d.color = CanvasColors.SELECTION_BORDER_COLOR
             g2d.stroke = BasicStroke(2.0f)
             g2d.drawRect(1, 1, width - 3, height - 3)
         }
         
         // Draw resize handle
-        drawResizeHandle(g2d, width, height, RESIZE_HANDLE_SIZE, UIColors.RESIZE_HANDLE_COLOR)
+        drawResizeHandle(g2d, width, height, RESIZE_HANDLE_SIZE, CanvasColors.RESIZE_HANDLE_COLOR)
         
         g2d.dispose()
     }
