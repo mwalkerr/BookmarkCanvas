@@ -20,7 +20,7 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
     init {
         // Create the canvas panel
         canvasPanel = org.mwalker.bookmarkcanvas.ui.CanvasPanel(project)
-        
+
         // No scroll pane - relying on canvas panning and zooming
         
         // Create toolbar actions
@@ -53,5 +53,6 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         // Set the toolbar and content
         toolbar = actionToolbar.component
         setContent(canvasPanel)
+//        setContent(KotlinSnippetHighlighter(project))
     }
 }

@@ -34,7 +34,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
     companion object {
         private const val RESIZE_HANDLE_SIZE = 10
         private const val TITLE_PADDING = 8
-        private const val CONTENT_PADDING = 10
+        private const val CONTENT_PADDING = 12
     }
     
     // Core UI components
@@ -60,8 +60,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Basic panel setup
         layout = BorderLayout()
         border = CompoundBorder(
-            LineBorder(CanvasColors.BORDER_COLOR, 1, true),
-            EmptyBorder(TITLE_PADDING, CONTENT_PADDING, TITLE_PADDING, CONTENT_PADDING)
+            LineBorder(CanvasColors.BORDER_COLOR, 2, true),
+            EmptyBorder(0, 0, 0, 0)
         )
         background = CanvasColors.NODE_BACKGROUND
         
@@ -80,16 +80,13 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
             isVisible = false // Not actually used for display
         }
         
-        // Add title panel with bottom padding when code snippet is shown
-        if (node.showCodeSnippet) {
-            titlePanel.border = EmptyBorder(0, 0, 8, 0) // Add padding below title
-        }
+        // No need to add additional padding to title panel anymore as it's handled in NodeUIManager
         add(titlePanel, BorderLayout.NORTH)
 
         // Initialize code snippet if needed
         if (node.showCodeSnippet) {
-            val scrollPane = uiManager.setupCodeSnippetView(this)
-            add(scrollPane, BorderLayout.CENTER)
+            val contentPanel = uiManager.setupCodeSnippetView(this)
+            add(contentPanel, BorderLayout.CENTER)
         }
 
         // Create context menu
@@ -167,13 +164,7 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Remove existing components
         removeAll()
         
-        // Set title panel border based on whether code snippet is shown
-        if (node.showCodeSnippet) {
-            titlePanel.border = EmptyBorder(0, 0, 8, 0) // Add padding below title
-        } else {
-            titlePanel.border = EmptyBorder(0, 0, 0, 0) // Remove padding when no code snippet
-        }
-        
+        // Title panel padding is now handled in NodeUIManager
         add(titlePanel, BorderLayout.NORTH)
 
         // Get the canvas panel to access zoom factor
@@ -182,8 +173,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         
         // Re-add code area if needed
         if (node.showCodeSnippet) {
-            val scrollPane = uiManager.setupCodeSnippetView(this)
-            add(scrollPane, BorderLayout.CENTER)
+            val contentPanel = uiManager.setupCodeSnippetView(this)
+            add(contentPanel, BorderLayout.CENTER)
             
             // Use persisted size if available, or default size for code snippet
             if (node.width > 0 && node.height > 0) {
@@ -244,13 +235,8 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Set rendering hints for smoother lines
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         
-        // Draw selection border and header if selected
+        // Only draw selection border if selected (no longer draw header highlight)
         if (isSelected) {
-            // Draw title background highlight
-            val headerRect = Rectangle(0, 0, width, titlePanel.height + TITLE_PADDING)
-            g2d.color = CanvasColors.SELECTION_HEADER_COLOR
-            g2d.fill(headerRect)
-            
             // Draw selection border
             g2d.color = CanvasColors.SELECTION_BORDER_COLOR
             g2d.stroke = BasicStroke(2.0f)

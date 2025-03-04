@@ -13,6 +13,7 @@ import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
+import javax.swing.BorderFactory
 import javax.swing.JPanel
 import javax.swing.JTextPane
 import javax.swing.border.EmptyBorder
@@ -34,7 +35,7 @@ class NodeUIManager(
     // Constants
     companion object {
         private const val TITLE_PADDING = 8
-        private const val CONTENT_PADDING = 10
+        private const val CONTENT_PADDING = 12
         private const val BASE_TITLE_FONT_SIZE = 12
         private const val BASE_CODE_FONT_SIZE = 12
         
@@ -71,9 +72,19 @@ class NodeUIManager(
             setSize(250, 30) // Minimum height to ensure text is visible
         }
         
-        // Wrap in a panel for proper layout
+        // Wrap in a panel for proper layout with GitHub-style spacing
         titlePanel = JPanel(BorderLayout())
-        titlePanel.isOpaque = false
+        titlePanel.isOpaque = true
+        titlePanel.background = CanvasColors.SELECTION_HEADER_COLOR  // GitHub dark title bg color
+        
+        // Match GitHub style with more generous padding (8px vertical, 12px horizontal)
+        titleTextPane.setBorder(EmptyBorder(0, 0, 0, 0)) // Remove any textPane borders
+        
+        // Create a compound border with bottom border matching GitHub style
+        val bottomBorder = BorderFactory.createMatteBorder(0, 0, 1, 0, CanvasColors.BORDER_COLOR)
+        val paddingBorder = BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        titlePanel.setBorder(BorderFactory.createCompoundBorder(bottomBorder, paddingBorder))
+        
         titlePanel.add(titleTextPane, BorderLayout.CENTER)
         
         return Pair(titlePanel, titleTextPane)
@@ -82,7 +93,7 @@ class NodeUIManager(
     /**
      * Creates and returns the code snippet component
      */
-    fun setupCodeSnippetView(parentContainer: JPanel): JBScrollPane {
+    fun setupCodeSnippetView(parentContainer: JPanel): JPanel {
         val code = node.getCodeSnippet(project)
         val newCodeArea = JBTextArea(code)
         this.codeArea = newCodeArea
@@ -94,6 +105,8 @@ class NodeUIManager(
         newCodeArea.background = CanvasColors.SNIPPET_BACKGROUND
         newCodeArea.foreground = CanvasColors.SNIPPET_TEXT_COLOR
         newCodeArea.caretColor = CanvasColors.SNIPPET_TEXT_COLOR
+        newCodeArea.lineWrap = true
+        newCodeArea.wrapStyleWord = true
 
         // Ensure clicks on the text area propagate to the parent for dragging
         newCodeArea.addMouseListener(object : MouseAdapter() {
@@ -108,25 +121,27 @@ class NodeUIManager(
             override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(newCodeArea, e, nodeComponent)
         })
         
-        // Create scroll pane
-        val scrollPane = JBScrollPane(newCodeArea)
-        scrollPane.setSize(200, 150)
-        scrollPane.preferredSize = Dimension(200, 150) // Keep for layout compatibility
-        scrollPane.border = LineBorder(CanvasColors.BORDER_COLOR, 1)
+        // Create content panel instead of scroll pane
+        val contentPanel = JPanel(BorderLayout())
+        contentPanel.background = CanvasColors.SNIPPET_BACKGROUND
+        contentPanel.border = EmptyBorder(12, 12, 12, 12)  // Match GitHub style padding
+        contentPanel.add(newCodeArea, BorderLayout.CENTER)
+        contentPanel.setSize(200, 150)
+        contentPanel.preferredSize = Dimension(200, 150) // Keep for layout compatibility
         
-        // Also apply the same event forwarding to the scroll pane
-        scrollPane.addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) = forwardMouseEvent(scrollPane, e, nodeComponent)
-            override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(scrollPane, e, nodeComponent)
-            override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(scrollPane, e, nodeComponent)
+        // Apply event forwarding to the content panel
+        contentPanel.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
+            override fun mouseReleased(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
+            override fun mouseClicked(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
         })
         
-        scrollPane.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(scrollPane, e, nodeComponent)
-            override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(scrollPane, e, nodeComponent)
+        contentPanel.addMouseMotionListener(object : MouseMotionAdapter() {
+            override fun mouseDragged(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
+            override fun mouseMoved(e: MouseEvent) = forwardMouseEvent(contentPanel, e, nodeComponent)
         })
 
-        return scrollPane
+        return contentPanel
     }
     
     /**
