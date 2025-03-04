@@ -6,10 +6,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
-import java.awt.BorderLayout
-import java.awt.Component
-import java.awt.Dimension
-import java.awt.Font
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
@@ -23,6 +19,7 @@ import com.intellij.ui.JBColor
 import org.mwalker.bookmarkcanvas.ui.CanvasColors
 import org.mwalker.bookmarkcanvas.ui.CanvasConstants
 import com.intellij.openapi.util.TextRange
+import java.awt.*
 
 /**
  * Manages UI components for a NodeComponent
@@ -92,7 +89,7 @@ class NodeUIManager(
             // Override UI painting methods to ensure colors are always correct
             override fun setForeground(fg: Color?) {
                 super.setForeground(CanvasColors.NODE_TEXT_COLOR)
-                document.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
+                document?.putProperty("ForegroundColor", CanvasColors.NODE_TEXT_COLOR)
             }
         }.apply {
             text = node.getDisplayText()
