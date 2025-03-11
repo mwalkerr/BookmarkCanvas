@@ -60,6 +60,9 @@ See [CLAUDE.md](CLAUDE.md) for development guidelines.
 - fix issue with font size for snippet when context changed
 - fix undo/redo
 - auto sizing
+- proper scaling of snippet text with node size
+- section with nodes for recent cursor locations
+- fix resize handle UI
 
 ## License
 

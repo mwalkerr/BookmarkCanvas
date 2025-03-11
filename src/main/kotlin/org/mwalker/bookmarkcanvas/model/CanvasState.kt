@@ -43,7 +43,7 @@ class CanvasState {
     }
 
     fun addConnection(connection: org.mwalker.bookmarkcanvas.model.NodeConnection) {
-        LOG.info("Adding connection: $connection")
+//        LOG.info("Adding connection: $connection")
         if (!isUndoRedo) saveSnapshot()
         connections.add(connection)
     }
