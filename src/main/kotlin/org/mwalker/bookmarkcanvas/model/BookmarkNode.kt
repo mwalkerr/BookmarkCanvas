@@ -25,7 +25,8 @@ data class BookmarkNode(
     var height: Int = 0, // Height of the node (0 means use default size)
     var showCodeSnippet: Boolean = false,
     var contextLinesBefore: Int = 3,
-    var contextLinesAfter: Int = 3
+    var contextLinesAfter: Int = 3,
+    var isValidBookmark: Boolean = true // Flag to indicate if the bookmark is valid
 ) {
     companion object {
         private val LOG = Logger.getInstance(BookmarkNode::class.java)

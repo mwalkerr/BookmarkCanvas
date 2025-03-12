@@ -37,6 +37,13 @@ class CanvasToolbar(private val project: Project) : SimpleToolWindowPanel(true, 
         actionGroup.add(ToggleShowGridAction(canvasPanel))
         actionGroup.add(ExportCanvasAction(project, canvasPanel))
         
+        // Add separator for bookmark management
+        actionGroup.addSeparator()
+        
+        // Add refresh and verify actions
+//        actionGroup.add(RefreshBookmarksAction(project, canvasPanel))
+        actionGroup.add(org.mwalker.bookmarkcanvas.actions.VerifyBookmarksAction(project, canvasPanel))
+        
         // Add separator for zoom and navigation
         actionGroup.addSeparator()
         

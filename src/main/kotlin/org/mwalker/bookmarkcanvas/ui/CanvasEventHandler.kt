@@ -63,8 +63,10 @@ class CanvasEventHandler(
                         "isPopupTrigger: ${e.isPopupTrigger}, isLeft: ${SwingUtilities.isLeftMouseButton(e)}, isRight: ${SwingUtilities.isRightMouseButton(e)}")
 
                 canvasPanel.requestFocusInWindow() // Ensure panel can receive key events
-                
+
+
                 if (SwingUtilities.isLeftMouseButton(e)) {
+
                     if (isModifierKeyDown(e) && e.source == canvasPanel) {
                         // Ctrl/Cmd + left click on canvas starts panning
                         canvasPanel.isPanning = true
@@ -307,26 +309,49 @@ class CanvasEventHandler(
      * Creates a mouse wheel listener for zoom behavior
      */
     private fun createMouseWheelListener(): MouseWheelListener {
+        // Track the last zoom time to throttle rapid events
+        var lastZoomTime = 0L
+        val ZOOM_THROTTLE_MS = 50 // Minimum ms between zoom operations
+        
         return MouseWheelListener { e ->
-            if (isModifierKeyDown(e)) {
-                // Pinch zoom - increment/decrement based on wheel direction
-                if (e.wheelRotation < 0) {
-                    // Zoom in
-                    canvasPanel.zoomIn()
+            val currentTime = System.currentTimeMillis()
+            
+            // Try to detect if this is a trackpad gesture
+            val preciseRotation = try {
+                // This is how macOS indicates a trackpad gesture
+                e.javaClass.getMethod("getPreciseWheelRotation").invoke(e) as Double
+            } catch (ex: Exception) {
+                null
+            }
+            
+            // Is this a trackpad gesture? Either:
+            // 1. On macOS with precise rotation available and non-zero
+            // 2. Or any platform with modifier key pressed (Ctrl/Cmd)
+            val isPreciseWheelEvent = preciseRotation != null && Math.abs(preciseRotation) < 1.0
+            val shouldZoom = isPreciseWheelEvent || isModifierKeyDown(e)
+            
+            if (shouldZoom && currentTime - lastZoomTime >= ZOOM_THROTTLE_MS) {
+                // For trackpad pinch gestures, we want a smoother zoom experience
+                if (isPreciseWheelEvent) {
+                    LOG.info("Trackpad gesture detected with rotation: $preciseRotation")
+                    
+                    // Use a smaller zoom factor for precise control with trackpad
+                    // Reverse the direction for natural feel with trackpad pinch
+                    val zoomFactor = 1.0 + (preciseRotation!! * -0.05)
+                    canvasPanel.zoomBy(zoomFactor)
                 } else {
-                    // Zoom out
-                    canvasPanel.zoomOut()
+                    // Regular mouse wheel - use standard zoom steps
+                    if (e.wheelRotation < 0) {
+                        canvasPanel.zoomIn()  // Zoom in with standard factor
+                    } else {
+                        canvasPanel.zoomOut() // Zoom out with standard factor
+                    }
                 }
                 
-                // Save state after zoom changes
-                val scrollPane = canvasPanel.parent?.parent as? JScrollPane
-                scrollPane?.viewport?.let { viewport ->
-                    val viewPosition = viewport.viewPosition
-                    canvasPanel.canvasState.scrollPositionX = viewPosition.x
-                    canvasPanel.canvasState.scrollPositionY = viewPosition.y
-                    // Save since zoom is a discrete operation, not continuous like dragging
-                    CanvasPersistenceService.getInstance().saveCanvasState(project, canvasPanel.canvasState)
-                }
+                lastZoomTime = currentTime
+                
+                // Consume the event to prevent scrolling
+                e.consume()
             }
         }
     }

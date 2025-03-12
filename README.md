@@ -38,6 +38,9 @@ https://github.com/user-attachments/assets/ae1bb649-2954-4f61-befa-3b252eb74a3e
 
 ### Installation
 
+
+
+
 1. Build the plugin using Gradle:
    ```
    ./gradlew build

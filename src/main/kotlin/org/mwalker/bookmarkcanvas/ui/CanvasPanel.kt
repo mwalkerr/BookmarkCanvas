@@ -152,6 +152,13 @@ class CanvasPanel(val project: Project) : JPanel() {
     fun zoomOut() {
         zoomManager.zoomOut()
     }
+    
+    /**
+     * Zooms by a custom factor (for more precise control with trackpad gestures)
+     */
+    fun zoomBy(factor: Double) {
+        zoomManager.zoomBy(factor)
+    }
 
     fun updateCanvasSize() {
         zoomManager.updateCanvasSize()

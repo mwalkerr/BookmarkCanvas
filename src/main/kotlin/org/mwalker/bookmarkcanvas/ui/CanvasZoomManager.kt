@@ -17,30 +17,31 @@ class CanvasZoomManager(
      * Increases the zoom level
      */
     fun zoomIn() {
-        canvasPanel._zoomFactor *= 1.2
-        canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
-        updateCanvasSize()
-        
-        // Explicitly repaint all components to ensure text visibility
-        for (nodeComp in nodeComponents.values) {
-            nodeComp.revalidate()
-            nodeComp.repaint()
-        }
-        
-        // Force grid cache update since zoom level changed
-        canvasPanel.invalidateGridCache()
-        
-        saveViewState()
-        canvasPanel.repaint()
+        zoomBy(1.2)
     }
 
     /**
      * Decreases the zoom level
      */
     fun zoomOut() {
-        canvasPanel._zoomFactor /= 1.2
+        zoomBy(1.0 / 1.2)
+    }
+    
+    /**
+     * Zoom by a specific factor (allows for more precise control with trackpad)
+     */
+    fun zoomBy(factor: Double) {
+        // Apply the zoom factor
+        canvasPanel._zoomFactor *= factor
+        
+        // Enforce min/max zoom limits
         if (canvasPanel._zoomFactor < 0.1) canvasPanel._zoomFactor = 0.1
+        if (canvasPanel._zoomFactor > 10.0) canvasPanel._zoomFactor = 10.0
+        
+        // Update canvas state
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
+        
+        // Update component positions and sizes
         updateCanvasSize()
         
         // Explicitly repaint all components to ensure text visibility
@@ -52,6 +53,7 @@ class CanvasZoomManager(
         // Force grid cache update since zoom level changed
         canvasPanel.invalidateGridCache()
         
+        // Save view state
         saveViewState()
         canvasPanel.repaint()
     }

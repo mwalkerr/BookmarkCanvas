@@ -17,6 +17,7 @@ import javax.swing.border.LineBorder
 import javax.swing.text.JTextComponent
 import javax.swing.text.View
 import javax.swing.SwingUtilities
+import javax.swing.RepaintManager
 
 /**
  * A UI component that represents a bookmark node on the canvas.
@@ -259,11 +260,19 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         LineBorder(CanvasColors.GROUP_SELECTION_BORDER_COLOR, 2, true),
         EmptyBorder(0, 0, 0, 0)
     )
+    private val invalidBookmarkBorder = CompoundBorder(
+        LineBorder(CanvasColors.INVALID_BOOKMARK_BORDER_COLOR, 2, true),
+        EmptyBorder(0, 0, 0, 0)
+    )
     
     // Last known selection state to avoid unnecessary border changes
     private var lastKnownSelectionState = false
     private var lastKnownGroupSelectionState = false
+    private var lastKnownValidState = true
     
+    /**
+     * Paint the component background and borders
+     */
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val g2d = g.create() as Graphics2D
@@ -271,14 +280,19 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
         // Set rendering hints for smoother lines
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         
-        // Only update the border if selection state has changed
+        // Check if bookmark validity changed
+        val currentValidState = node.isValidBookmark
+        val validStateChanged = currentValidState != lastKnownValidState
+        
+        // Only update the border if selection state or validity has changed
         val isPartOfGroup = isPartOfSelectionGroup
         if (isSelected != lastKnownSelectionState || 
-            (isSelected && isPartOfGroup != lastKnownGroupSelectionState)) {
+            (isSelected && isPartOfGroup != lastKnownGroupSelectionState) ||
+            validStateChanged) {
             
-            // Update border based on selection state
+            // Update border based on selection state and validity
             if (isSelected) {
-                // Choose border based on whether this is part of a multi-node selection
+                // Selection takes precedence - choose border based on whether this is part of a multi-node selection
                 border = if (isPartOfGroup) {
                     groupSelectionBorder
                 } else {
@@ -293,13 +307,18 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
                 }
                 g2d.stroke = BasicStroke(4.0f)
                 g2d.drawRect(1, 1, width - 3, height - 3)
+            } else if (!currentValidState) {
+                // Invalid bookmark - show red border
+                border = invalidBookmarkBorder
             } else {
+                // Normal unselected state
                 border = normalBorder
             }
             
             // Update cached states
             lastKnownSelectionState = isSelected
             lastKnownGroupSelectionState = isPartOfGroup
+            lastKnownValidState = currentValidState
         } else if (isSelected) {
             // Always draw the highlight for selected nodes
             g2d.color = if (isPartOfGroup) {
@@ -309,10 +328,28 @@ class NodeComponent(val node: BookmarkNode, private val project: Project) :
             }
             g2d.stroke = BasicStroke(4.0f)
             g2d.drawRect(1, 1, width - 3, height - 3)
+        } else if (!currentValidState) {
+            // Always draw special border for invalid nodes
+            border = invalidBookmarkBorder
         }
         
-        // Draw resize handle
-        drawResizeHandle(g2d, width, height, RESIZE_HANDLE_SIZE, CanvasColors.RESIZE_HANDLE_COLOR)
+        g2d.dispose()
+    }
+    
+    /**
+     * Override to paint the resize handle AFTER all children are painted
+     * This ensures the resize handle is always visible on top of all content
+     */
+    override fun paintChildren(g: Graphics) {
+        super.paintChildren(g)
+        
+        // Create a new graphics object for the resize handle
+        val g2d = g.create() as Graphics2D
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        
+        // Now draw the resize handle on top of everything else
+        // Always use pure white for maximum visibility
+        drawResizeHandle(g2d, width, height, RESIZE_HANDLE_SIZE, Color.WHITE)
         
         g2d.dispose()
     }

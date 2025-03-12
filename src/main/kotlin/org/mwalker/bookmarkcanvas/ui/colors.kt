@@ -48,8 +48,8 @@ object CanvasColors {
         Color(201, 209, 217), // Dark mode - GitHub dark: #c9d1d9
     )
     val RESIZE_HANDLE_COLOR = JBColor(
-        Color(180, 180, 180), // Light mode
-        Color(100, 100, 100), // Dark mode
+        Color(120, 120, 120), // Light mode - darker for better contrast
+        Color(210, 210, 210), // Dark mode - lighter for better contrast
     )
     val SELECTION_BORDER_COLOR = JBColor(
         Color(0, 120, 215),   // Light mode
@@ -71,5 +71,11 @@ object CanvasColors {
     val BORDER_COLOR = JBColor(
         Color(200, 200, 200), // Light mode
         Color(48, 54, 61)     // Dark mode - GitHub dark: #30363d
+    )
+    
+    // Invalid bookmark border color
+    val INVALID_BOOKMARK_BORDER_COLOR = JBColor(
+        Color(220, 50, 50),   // Light mode - red
+        Color(220, 50, 50)    // Dark mode - same red
     )
 }

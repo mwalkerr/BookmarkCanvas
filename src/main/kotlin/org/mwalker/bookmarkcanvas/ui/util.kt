@@ -1,15 +1,12 @@
 package org.mwalker.bookmarkcanvas.ui
 
-import java.awt.Color
-import java.awt.Component
-import java.awt.Font
-import java.awt.Graphics2D
-import java.awt.Point
-import java.awt.Rectangle
+import com.intellij.ui.Gray
+import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.font.FontRenderContext
 import javax.swing.SwingUtilities
 import javax.swing.text.JTextComponent
+import com.intellij.ui.JBColor
 
 /**
  * Forwards a mouse event from one component to another, converting coordinates.
@@ -58,33 +55,51 @@ fun getFontRenderContext(component: Component): FontRenderContext {
 
 /**
  * Checks if a point is within the resize area of a component with the specified handle size
+ * Uses an enlarged area for easier grabbing of the resize handle
  */
 fun isInResizeArea(point: Point, componentWidth: Int, componentHeight: Int, handleSize: Int): Boolean {
+    // Make hit area larger than visual handle for easier grabbing
+    val enlargedHandleSize = handleSize + 4
+    
     val resizeArea = Rectangle(
-        componentWidth - handleSize, 
-        componentHeight - handleSize,
-        handleSize,
-        handleSize
+        componentWidth - enlargedHandleSize, 
+        componentHeight - enlargedHandleSize,
+        enlargedHandleSize,
+        enlargedHandleSize
     )
     return resizeArea.contains(point)
 }
 
 /**
  * Draws a resize handle in the bottom-right corner of a component
+ * Simple white diagonal lines that are clearly visible
  */
 fun drawResizeHandle(g2d: Graphics2D, componentWidth: Int, componentHeight: Int, handleSize: Int, color: Color) {
-    g2d.color = color
+    // Save original stroke
+    val originalStroke = g2d.stroke
+    
+    // Always use white for maximum visibility in any theme
+    g2d.color = Gray._200
+    
+    // Use very thick stroke for maximum visibility
+    g2d.stroke = BasicStroke(1.5f)
     
     // Draw diagonal lines for resize handle
     val x = componentWidth - handleSize
     val y = componentHeight - handleSize
-    for (i in 1..3) {
-        val offset = i * 3
+    
+    // Draw 3 larger diagonal lines with wider spacing
+//    for (i in 1..3) {
+    for (i in 0..2) {
+        val offset = i * 4  // Use wider spacing
         g2d.drawLine(
             x + offset, y + handleSize,
             x + handleSize, y + offset
         )
     }
+    
+    // Restore original stroke
+    g2d.stroke = originalStroke
 }
 
 
