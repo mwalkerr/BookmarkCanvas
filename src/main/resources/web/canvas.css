@@ -1,0 +1,245 @@
+/* Canvas Container */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #2B2B2B;
+    user-select: none;
+}
+
+#canvas-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #2B2B2B;
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: transparent;
+    cursor: default;
+}
+
+#nodes-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Grid styles */
+.grid-background {
+    background-image: 
+        linear-gradient(to right, #3E3E3E 1px, transparent 1px),
+        linear-gradient(to bottom, #3E3E3E 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Node Styles */
+.node {
+    position: absolute;
+    background-color: #3C3F41;
+    border: 2px solid #5E6366;
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 120px;
+    max-width: 200px;
+    cursor: move;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.2s ease;
+}
+
+.node:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.node.selected {
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+}
+
+.node.connecting {
+    border-color: #FFA500;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.3);
+}
+
+.node-title {
+    color: #BBBBBB;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    word-wrap: break-word;
+    line-height: 1.2;
+}
+
+.node-content {
+    color: #A0A0A0;
+    font-size: 10px;
+    line-height: 1.2;
+    word-wrap: break-word;
+    max-height: 60px;
+    overflow: hidden;
+}
+
+.node-url {
+    color: #6A9DDD;
+    font-size: 9px;
+    margin-top: 4px;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.node-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, transparent 50%, #666 50%);
+    cursor: se-resize;
+    border-bottom-right-radius: 6px;
+}
+
+/* Selection Box */
+.selection-box {
+    position: absolute;
+    border: 1px dashed #4A90E2;
+    background-color: rgba(74, 144, 226, 0.1);
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Temporary Connection Line */
+.temp-connection {
+    position: absolute;
+    pointer-events: none;
+    z-index: 500;
+}
+
+/* Context Menu */
+.context-menu {
+    position: absolute;
+    background-color: #3C3F41;
+    border: 1px solid #5E6366;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 2000;
+    min-width: 120px;
+    padding: 4px 0;
+}
+
+.menu-item {
+    padding: 6px 12px;
+    color: #BBBBBB;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    background-color: #4A90E2;
+    color: white;
+}
+
+.menu-separator {
+    height: 1px;
+    background-color: #5E6366;
+    margin: 4px 0;
+}
+
+/* Connection Styles */
+.connection-line {
+    stroke: #6A9DDD;
+    stroke-width: 2;
+    fill: none;
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.connection-line:hover {
+    stroke: #4A90E2;
+    stroke-width: 3;
+}
+
+.connection-line.selected {
+    stroke: #FFA500;
+    stroke-width: 3;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* Animation for smooth interactions */
+.node.dragging {
+    transition: none;
+}
+
+.zoom-transition {
+    transition: transform 0.2s ease-out;
+}
+
+/* File node styling */
+.node.file-node {
+    background-color: #4A5A3C;
+    border-color: #6A7A5C;
+}
+
+.node.file-node .node-title {
+    color: #C5D5B5;
+}
+
+.node.file-node .node-content {
+    color: #A5B595;
+}
+
+/* Code snippet highlighting */
+.code-snippet {
+    background-color: #2B2B2B;
+    border: 1px solid #404040;
+    border-radius: 4px;
+    padding: 4px;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+    font-size: 9px;
+    color: #A9B7C6;
+    white-space: pre-wrap;
+    overflow: hidden;
+    max-height: 40px;
+}
+
+/* Zoom controls would go here if needed */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: #3C3F41;
+    border: 1px solid #5E6366;
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.zoom-button {
+    background-color: transparent;
+    border: 1px solid #5E6366;
+    color: #BBBBBB;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.zoom-button:hover {
+    background-color: #4A90E2;
+    color: white;
+}

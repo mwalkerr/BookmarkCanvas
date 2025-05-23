@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmark Canvas</title>
+    <link rel="stylesheet" href="canvas.css">
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas" width="2000" height="2000"></canvas>
+        <div id="nodes-container"></div>
+        <div id="selection-box" class="selection-box" style="display: none;"></div>
+        <div id="temp-connection" class="temp-connection" style="display: none;"></div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu" style="display: none;">
+        <div class="menu-item" data-action="add-bookmark">Add Bookmark</div>
+        <div class="menu-item" data-action="paste">Paste</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" data-action="clear-canvas">Clear Canvas</div>
+        <div class="menu-item" data-action="refresh-bookmarks">Refresh Bookmarks</div>
+    </div>
+
+    <!-- Node Context Menu -->
+    <div id="node-context-menu" class="context-menu" style="display: none;">
+        <div class="menu-item" data-action="edit">Edit</div>
+        <div class="menu-item" data-action="copy">Copy</div>
+        <div class="menu-item" data-action="delete">Delete</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" data-action="connect">Connect</div>
+        <div class="menu-item" data-action="disconnect">Disconnect All</div>
+    </div>
+
+    <script src="canvas.js"></script>
+</body>
+</html>

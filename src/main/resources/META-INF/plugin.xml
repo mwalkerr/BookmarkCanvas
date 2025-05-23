@@ -15,6 +15,11 @@
                     icon="/icons/book-bookmark-solid.svg"
                     anchor="right"
                     factoryClass="org.mwalker.bookmarkcanvas.ui.CanvasToolWindow"/>
+        <toolWindow id="BookmarkCanvasWeb"
+                    secondary="true"
+                    icon="/icons/book-bookmark-solid.svg"
+                    anchor="right"
+                    factoryClass="org.mwalker.bookmarkcanvas.ui.WebViewCanvasToolWindow"/>
         <applicationService 
             serviceImplementation="org.mwalker.bookmarkcanvas.services.CanvasPersistenceService"/>
     </extensions>
@@ -24,6 +29,14 @@
                 class="org.mwalker.bookmarkcanvas.actions.AddToCanvasAction"
                 text="Add to Bookmark Canvas"
                 description="Add this bookmark to the Bookmark Canvas">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu.GoTo" anchor="last"/>
+        </action>
+        
+        <action id="BookmarkCanvas.FindOnCanvas"
+                class="org.mwalker.bookmarkcanvas.actions.FindOnCanvasAction"
+                text="Find on Bookmark Canvas"
+                description="Find and highlight this location on the Bookmark Canvas">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu.GoTo" anchor="last"/>
         </action>

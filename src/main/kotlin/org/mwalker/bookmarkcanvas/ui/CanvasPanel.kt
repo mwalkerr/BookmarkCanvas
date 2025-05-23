@@ -13,7 +13,7 @@ import javax.swing.*
 /**
  * Main canvas panel for displaying and interacting with bookmark nodes
  */
-class CanvasPanel(val project: Project) : JPanel() {
+class CanvasPanel(val project: Project) : JPanel(), CanvasInterface {
     val canvasState: CanvasState = CanvasPersistenceService.getInstance().getCanvasState(project)
     val nodeComponents = mutableMapOf<String, NodeComponent>()
     val selectedNodes = mutableSetOf<NodeComponent>()
@@ -85,11 +85,11 @@ class CanvasPanel(val project: Project) : JPanel() {
         CanvasPersistenceService.getInstance().saveCanvasState(project, canvasState)
     }
 
-    fun addNodeComponent(node: BookmarkNode) {
+    override fun addNodeComponent(node: BookmarkNode) {
         nodeManager.addNodeComponent(node)
     }
     
-    fun refreshFromState() {
+    override fun refreshFromState() {
         // First clear existing node components
         removeAll()
         nodeComponents.clear()
@@ -135,7 +135,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         contextMenuManager.refreshBookmarks()
     }
 
-    fun clearCanvas() {
+    override fun clearCanvas() {
         removeAll()
         nodeComponents.clear()
         selectedNodes.clear()
@@ -145,11 +145,11 @@ class CanvasPanel(val project: Project) : JPanel() {
         repaint()
     }
 
-    fun zoomIn() {
+    override fun zoomIn() {
         zoomManager.zoomIn()
     }
 
-    fun zoomOut() {
+    override fun zoomOut() {
         zoomManager.zoomOut()
     }
     
@@ -172,6 +172,22 @@ class CanvasPanel(val project: Project) : JPanel() {
         zoomManager.goToTopLeftNode()
     }
 
+    override fun goHome() {
+        goToTopLeftNode()
+    }
+
+    override fun undo() {
+        if (canvasState.undo()) {
+            refreshFromState()
+        }
+    }
+
+    override fun redo() {
+        if (canvasState.redo()) {
+            refreshFromState()
+        }
+    }
+
     // Property accessors 
     val snapToGrid: Boolean
         get() = _snapToGrid
@@ -179,7 +195,7 @@ class CanvasPanel(val project: Project) : JPanel() {
     val showGrid: Boolean
         get() = _showGrid
     
-    fun setSnapToGrid(value: Boolean) {
+    override fun setSnapToGrid(value: Boolean) {
         _snapToGrid = value
         _showGrid = value // Show grid when snap is enabled
         
@@ -193,7 +209,7 @@ class CanvasPanel(val project: Project) : JPanel() {
         invalidateGridCache()
     }
     
-    fun setShowGrid(value: Boolean) {
+    override fun setShowGrid(value: Boolean) {
         _showGrid = value
         
         // Update canvas state

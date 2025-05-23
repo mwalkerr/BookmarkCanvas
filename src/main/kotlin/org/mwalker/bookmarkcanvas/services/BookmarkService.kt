@@ -88,6 +88,27 @@ class BookmarkService {
             }
         }
 
+        fun createFileNodeFromCurrentFile(project: Project): BookmarkNode? {
+            val editor = FileEditorManager.getInstance(project).selectedTextEditor
+            val file = if (editor != null) {
+                FileDocumentManager.getInstance().getFile(editor.document)
+            } else {
+                // Try to get the currently selected file in the project view
+                val fileEditorManager = FileEditorManager.getInstance(project)
+                fileEditorManager.selectedFiles.firstOrNull()
+            } ?: return null
+            
+            // Resolve the file path
+            val filePath = resolveFilePath(project, file.path)
+            
+            return BookmarkNode(
+                bookmarkId = "file_" + System.currentTimeMillis(),
+                filePath = filePath,
+                lineNumber0Based = 0,
+                lineContent = "File: ${file.name}"
+            )
+        }
+
         fun getAllBookmarkNodes(project: Project): List<BookmarkNode> {
             val result = mutableListOf<BookmarkNode>()
 
