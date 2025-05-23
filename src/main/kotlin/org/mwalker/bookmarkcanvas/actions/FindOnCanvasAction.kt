@@ -142,7 +142,15 @@ class FindOnCanvasAction : AnAction() {
         // Calculate zoom to fit all nodes with padding
         val zoomX = canvasWidth.toDouble() / logicalWidth
         val zoomY = canvasHeight.toDouble() / logicalHeight
-        val targetZoom = minOf(zoomX, zoomY, 2.0) // Cap at reasonable zoom level
+        
+        // Apply different max zoom limits based on number of nodes
+        val maxZoom = if (nodeComponents.size == 1) {
+            0.5 // More conservative zoom for single nodes to avoid over-zooming
+        } else {
+            0.5 // Standard zoom limit for multiple nodes
+        }
+        
+        val targetZoom = minOf(zoomX, zoomY, maxZoom)
         
         // Set the zoom factor
         canvasPanel._zoomFactor = targetZoom
