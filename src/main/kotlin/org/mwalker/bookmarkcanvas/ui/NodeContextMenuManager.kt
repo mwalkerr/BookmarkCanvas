@@ -77,6 +77,21 @@ class NodeContextMenuManager(
         }
         menu.add(createConnectionItem)
         
+        menu.addSeparator()
+        
+        // Z-order options
+        val sendToFrontItem = JMenuItem("Send to Front")
+        sendToFrontItem.addActionListener {
+            sendToFront()
+        }
+        menu.add(sendToFrontItem)
+        
+        val sendToBackItem = JMenuItem("Send to Back")
+        sendToBackItem.addActionListener {
+            sendToBack()
+        }
+        menu.add(sendToBackItem)
+        
         this.menu = menu
         return menu
     }
@@ -176,6 +191,34 @@ class NodeContextMenuManager(
     private fun startConnection() {
         val canvas = nodeComponent.parent as? CanvasPanel
         canvas?.connectionStartNode = nodeComponent
+    }
+    
+    /**
+     * Sends the node to the front (top z-order)
+     */
+    private fun sendToFront() {
+        val canvas = nodeComponent.parent as? CanvasPanel
+        canvas?.let {
+            // Remove and re-add at index 0 to bring to front
+            it.remove(nodeComponent)
+            it.add(nodeComponent, 0)
+            it.revalidate()
+            it.repaint()
+        }
+    }
+    
+    /**
+     * Sends the node to the back (bottom z-order)
+     */
+    private fun sendToBack() {
+        val canvas = nodeComponent.parent as? CanvasPanel
+        canvas?.let {
+            // Remove and re-add at the last position to send to back
+            it.remove(nodeComponent)
+            it.add(nodeComponent)
+            it.revalidate()
+            it.repaint()
+        }
     }
     
     /**

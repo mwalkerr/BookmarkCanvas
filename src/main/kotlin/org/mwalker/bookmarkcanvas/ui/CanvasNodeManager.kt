@@ -19,7 +19,8 @@ class CanvasNodeManager(
      */
     fun addNodeComponent(node: BookmarkNode) {
         val nodeComponent = NodeComponent(node, project)
-        canvasPanel.add(nodeComponent)
+        // Add at index 0 to ensure new nodes appear on top of existing ones
+        canvasPanel.add(nodeComponent, 0)
 
         // For new nodes, place at 0,0 or shift existing nodes if needed
         if (node.positionX == 100 && node.positionY == 100) {
