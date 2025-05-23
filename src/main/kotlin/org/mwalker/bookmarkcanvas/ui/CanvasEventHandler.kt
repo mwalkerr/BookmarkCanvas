@@ -338,13 +338,13 @@ class CanvasEventHandler(
                     // Use a smaller zoom factor for precise control with trackpad
                     // Reverse the direction for natural feel with trackpad pinch
                     val zoomFactor = 1.0 + (preciseRotation!! * -0.05)
-                    canvasPanel.zoomBy(zoomFactor)
+                    canvasPanel.zoomBy(zoomFactor, e.point)
                 } else {
                     // Regular mouse wheel - use standard zoom steps
                     if (e.wheelRotation < 0) {
-                        canvasPanel.zoomIn()  // Zoom in with standard factor
+                        canvasPanel.zoomManager.zoomIn(e.point)  // Zoom in with cursor center
                     } else {
-                        canvasPanel.zoomOut() // Zoom out with standard factor
+                        canvasPanel.zoomManager.zoomOut(e.point) // Zoom out with cursor center
                     }
                 }
                 

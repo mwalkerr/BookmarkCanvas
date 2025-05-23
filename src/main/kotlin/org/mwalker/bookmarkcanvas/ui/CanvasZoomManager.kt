@@ -28,9 +28,32 @@ class CanvasZoomManager(
     }
     
     /**
+     * Increases the zoom level centered around a specific point
+     */
+    fun zoomIn(centerPoint: Point) {
+        zoomBy(1.2, centerPoint)
+    }
+
+    /**
+     * Decreases the zoom level centered around a specific point
+     */
+    fun zoomOut(centerPoint: Point) {
+        zoomBy(1.0 / 1.2, centerPoint)
+    }
+    
+    /**
      * Zoom by a specific factor (allows for more precise control with trackpad)
      */
     fun zoomBy(factor: Double) {
+        zoomBy(factor, null)
+    }
+    
+    /**
+     * Zoom by a specific factor centered around a specific point
+     */
+    fun zoomBy(factor: Double, centerPoint: Point?) {
+        val oldZoomFactor = canvasPanel._zoomFactor
+        
         // Apply the zoom factor
         canvasPanel._zoomFactor *= factor
         
@@ -38,8 +61,30 @@ class CanvasZoomManager(
         if (canvasPanel._zoomFactor < 0.1) canvasPanel._zoomFactor = 0.1
         if (canvasPanel._zoomFactor > 10.0) canvasPanel._zoomFactor = 10.0
         
+        // Calculate the actual zoom change that was applied (considering limits)
+        val actualZoomChange = canvasPanel._zoomFactor / oldZoomFactor
+        
         // Update canvas state
         canvasPanel.canvasState.zoomFactor = canvasPanel._zoomFactor
+        
+        // If we have a center point, adjust the canvas offset to keep that point fixed
+        if (centerPoint != null && actualZoomChange != 1.0) {
+            // Calculate the offset needed to keep the center point visually fixed
+            val offsetDeltaX = centerPoint.x * (1.0 - actualZoomChange)
+            val offsetDeltaY = centerPoint.y * (1.0 - actualZoomChange)
+            
+            // Apply offset to all nodes to simulate the canvas being repositioned
+            for (nodeComp in nodeComponents.values) {
+                // Adjust the logical position by the offset (in logical coordinates)
+                val logicalOffsetX = (offsetDeltaX / canvasPanel._zoomFactor).toInt()
+                val logicalOffsetY = (offsetDeltaY / canvasPanel._zoomFactor).toInt()
+                
+                nodeComp.node.position = Point(
+                    nodeComp.node.position.x + logicalOffsetX,
+                    nodeComp.node.position.y + logicalOffsetY
+                )
+            }
+        }
         
         // Update component positions and sizes
         updateCanvasSize()

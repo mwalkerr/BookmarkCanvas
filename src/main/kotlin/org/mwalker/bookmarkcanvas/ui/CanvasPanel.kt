@@ -37,7 +37,7 @@ class CanvasPanel(val project: Project) : JPanel() {
     private val nodeManager: CanvasNodeManager
     private val selectionManager: CanvasSelectionManager
     private val connectionManager: CanvasConnectionManager
-    private val zoomManager: CanvasZoomManager
+    val zoomManager: CanvasZoomManager
     private val contextMenuManager: CanvasContextMenuManager
     private val eventHandler: CanvasEventHandler
     
@@ -158,6 +158,10 @@ class CanvasPanel(val project: Project) : JPanel() {
      */
     fun zoomBy(factor: Double) {
         zoomManager.zoomBy(factor)
+    }
+    
+    fun zoomBy(factor: Double, centerPoint: Point) {
+        zoomManager.zoomBy(factor, centerPoint)
     }
 
     fun updateCanvasSize() {
