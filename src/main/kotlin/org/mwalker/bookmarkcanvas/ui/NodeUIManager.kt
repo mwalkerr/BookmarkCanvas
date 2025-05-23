@@ -130,12 +130,17 @@ class NodeUIManager(
         // Get the code snippet first
         val code = node.getCodeSnippet(project)
         
+        // Calculate content panel size based on code content
+        val font = Font("Monospaced", Font.PLAIN, BASE_CODE_FONT_SIZE)
+        val frc = getFontRenderContext(parentContainer)
+        val codeDimensions = calculateCodeSnippetDimensions(code, font, frc, 600)
+        
         // Create content panel first
         val contentPanel = JPanel(BorderLayout())
         contentPanel.background = CanvasColors.SNIPPET_BACKGROUND
         contentPanel.border = EmptyBorder(CONTENT_PADDING, CONTENT_PADDING, CONTENT_PADDING, CONTENT_PADDING)
-        contentPanel.setSize(250, 200)
-        contentPanel.preferredSize = Dimension(250, 200)
+        contentPanel.setSize(codeDimensions.width, codeDimensions.height)
+        contentPanel.preferredSize = codeDimensions
         
         // Apply event forwarding to the content panel
         contentPanel.addMouseListener(object : MouseAdapter() {
@@ -353,10 +358,20 @@ class NodeUIManager(
                 totalHeight.coerceAtLeast(40)
             )
         } else {
-            // For code snippet mode, preserve width during recalculation
+            // For code snippet mode, calculate size based on actual content
+            val code = node.getCodeSnippet(project)
+            val font = Font("Monospaced", Font.PLAIN, BASE_CODE_FONT_SIZE)
+            val frc = getFontRenderContext(parentComponent)
+            
+            // Calculate dimensions based on code content with reasonable max width
+            val codeDimensions = calculateCodeSnippetDimensions(code, font, frc, 600)
+            
+            // Add title height to the total height
+            val titleHeight = TITLE_PADDING * 2 + 30 // Approximate title height
+            
             return Dimension(
-                parentComponent.width.takeIf { it > 0 } ?: 250, 
-                200
+                codeDimensions.width,
+                codeDimensions.height + titleHeight
             )
         }
     }

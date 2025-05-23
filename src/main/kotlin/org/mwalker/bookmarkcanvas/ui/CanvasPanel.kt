@@ -35,7 +35,7 @@ class CanvasPanel(val project: Project) : JPanel() {
     
     // Helper managers
     private val nodeManager: CanvasNodeManager
-    private val selectionManager: CanvasSelectionManager
+    val selectionManager: CanvasSelectionManager
     private val connectionManager: CanvasConnectionManager
     val zoomManager: CanvasZoomManager
     private val contextMenuManager: CanvasContextMenuManager

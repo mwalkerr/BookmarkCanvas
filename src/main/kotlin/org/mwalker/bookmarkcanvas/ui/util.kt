@@ -54,6 +54,48 @@ fun getFontRenderContext(component: Component): FontRenderContext {
 }
 
 /**
+ * Calculates optimal dimensions for a code snippet based on its content
+ */
+fun calculateCodeSnippetDimensions(code: String, font: Font, frc: FontRenderContext, maxWidth: Int = 600): Dimension {
+    if (code.isEmpty()) return Dimension(250, 100)
+    
+    val lines = code.split('\n')
+    var maxLineWidth = 0
+    var totalHeight = 0
+    
+    // Calculate width based on the longest line
+    val fontMetrics = FontMetrics2D(font, frc)
+    
+    for (line in lines) {
+        val lineWidth = fontMetrics.stringWidth(line)
+        maxLineWidth = maxOf(maxLineWidth, lineWidth)
+    }
+    
+    // Calculate height based on number of lines and line height
+    val lineHeight = (fontMetrics.ascent + fontMetrics.descent + fontMetrics.leading * 1.2).toInt()
+    totalHeight = lines.size * lineHeight
+    
+    // Apply constraints: reasonable maximum width, no maximum height
+    val finalWidth = minOf(maxLineWidth + 40, maxWidth).coerceAtLeast(250) // Add padding and min width
+    val finalHeight = (totalHeight + 40).coerceAtLeast(100) // Add padding and min height
+    
+    return Dimension(finalWidth, finalHeight)
+}
+
+/**
+ * Helper class to get string width from FontMetrics using FontRenderContext
+ */
+private class FontMetrics2D(val font: Font, val frc: FontRenderContext) {
+    val ascent: Float = font.getLineMetrics("Ag", frc).ascent
+    val descent: Float = font.getLineMetrics("Ag", frc).descent
+    val leading: Float = font.getLineMetrics("Ag", frc).leading
+    
+    fun stringWidth(str: String): Int {
+        return font.getStringBounds(str, frc).width.toInt()
+    }
+}
+
+/**
  * Checks if a point is within the resize area of a component with the specified handle size
  * Uses an enlarged area for easier grabbing of the resize handle
  */

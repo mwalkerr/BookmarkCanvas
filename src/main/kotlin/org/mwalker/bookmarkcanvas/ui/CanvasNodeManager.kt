@@ -63,6 +63,12 @@ class CanvasNodeManager(
         
         canvasPanel.nodeComponents[node.id] = nodeComponent
         
+        // Clear existing selection and select the newly added node
+        canvasPanel.selectionManager.clearSelection()
+        canvasPanel.selectedNodes.add(nodeComponent)
+        nodeComponent.isSelected = true
+        nodeComponent.repaint()
+        
         // Ensure canvas state is saved after adding node
         canvasPanel.saveState()
     }
