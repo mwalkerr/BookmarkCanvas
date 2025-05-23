@@ -276,9 +276,8 @@ class NodeUIManager(
      * Updates font sizes based on the provided zoom factor
      */
     fun updateFontSizes(zoomFactor: Double) {
-        // Update title font - ensure minimum size is proportional to zoom
-        // but never below an absolute minimum to maintain visibility
-        val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_TITLE_SIZE)
+        // Update title font - scale proportionally with zoom factor (no minimum size constraint)
+        val scaledTitleSize = (BASE_TITLE_FONT_SIZE * zoomFactor).toInt()
         
         // Get current font and ensure we maintain the style but update the size
         val currentFont = titleTextPane.font
@@ -298,7 +297,7 @@ class NodeUIManager(
         
         // Update code area font if present (legacy support)
         codeArea?.let { area ->
-            val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt().coerceAtLeast(MIN_VISIBLE_CODE_SIZE)
+            val scaledCodeSize = (BASE_CODE_FONT_SIZE * zoomFactor).toInt()
             val newCodeFont = Font("Monospaced", Font.PLAIN, scaledCodeSize)
             area.font = newCodeFont
             area.foreground = CanvasColors.SNIPPET_TEXT_COLOR // Ensure text color is visible

@@ -287,8 +287,8 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
             val fontSize = colorsScheme.editorFontSize
             baseEditorFont = Font(fontName, Font.PLAIN, fontSize)
             
-            // Apply zoom to font size
-            val scaledFontSize = (fontSize * zoomFactor).toInt().coerceAtLeast(6)
+            // Apply zoom to font size (scale proportionally without minimum constraint)
+            val scaledFontSize = (fontSize * zoomFactor).toInt()
             editorFont = Font(fontName, Font.PLAIN, scaledFontSize)
 
             // Use the editor's background color
