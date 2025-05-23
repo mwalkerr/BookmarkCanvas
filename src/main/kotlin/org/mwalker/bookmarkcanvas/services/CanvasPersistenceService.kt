@@ -7,6 +7,7 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.Disposable
 import org.mwalker.bookmarkcanvas.model.BookmarkNode
 import org.mwalker.bookmarkcanvas.model.CanvasState
 import org.mwalker.bookmarkcanvas.model.NodeConnection
@@ -142,7 +143,7 @@ class BookmarkCanvasState : BaseState() {
     name = "BookmarkCanvasPersistence",
     storages = [Storage("bookmarkCanvas.xml")]
 )
-class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasState>(BookmarkCanvasState()) {
+class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasState>(BookmarkCanvasState()), Disposable {
     private val LOG = Logger.getInstance(CanvasPersistenceService::class.java)
     
     // In-memory storage for runtime canvas states
@@ -281,6 +282,8 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
                         LOG.info("Canvas state for project ${project.name} saved successfully")
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Don't log cancellation as an error - it's expected when a new save operation starts
             } catch (e: Exception) {
                 LOG.error("Error saving canvas state: ${e.message}", e)
             } finally {
@@ -291,5 +294,14 @@ class CanvasPersistenceService : SimplePersistentStateComponent<BookmarkCanvasSt
         
         // Store job for cancellation if needed
         saveJobs[projectId] = job
+    }
+    
+    override fun dispose() {
+        // Cancel all ongoing save jobs
+        saveJobs.values.forEach { it.cancel() }
+        saveJobs.clear()
+        
+        // Cancel the coroutine scope
+        coroutineScope.cancel()
     }
 }
