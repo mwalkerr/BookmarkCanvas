@@ -234,17 +234,14 @@ class FindOnCanvasAction : AnAction() {
     }
     
     override fun update(@NotNull e: AnActionEvent) {
-        // Only enable the action when we have an open editor and the bookmark canvas tool window exists
+        // Only enable the action when we have an open editor
         val project = e.project
         val editor = e.getData(CommonDataKeys.EDITOR)
-        val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
         
-        val isEnabled = project != null && 
-                       editor != null && 
-                       virtualFile != null &&
-                       hasNodesInCanvas(project)
-        
-        e.presentation.isEnabledAndVisible = isEnabled
+        e.presentation.isEnabledAndVisible = (
+                project != null &&
+                        editor != null
+                )
     }
     
     /**

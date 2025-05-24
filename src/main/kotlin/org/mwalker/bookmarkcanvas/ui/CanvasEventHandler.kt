@@ -24,7 +24,6 @@ class CanvasEventHandler(
     private val nodeDragThrottler = EventThrottler(16) // ~60fps
     private val connectionThrottler = EventThrottler(16) // ~60fps
     private val mouseMoveThrottler = EventThrottler(50) // Lower frequency for mouse moves
-    
     /**
      * Checks if a modifier key (Ctrl/Cmd) is pressed
      */
@@ -52,7 +51,6 @@ class CanvasEventHandler(
         // Make the panel focusable to receive key events
         canvasPanel.isFocusable = true
     }
-    
     /**
      * Creates the mouse adapter for handling mouse events
      */
@@ -66,7 +64,6 @@ class CanvasEventHandler(
 
 
                 if (SwingUtilities.isLeftMouseButton(e)) {
-
                     if (isModifierKeyDown(e) && e.source == canvasPanel) {
                         // Ctrl/Cmd + left click on canvas starts panning
                         canvasPanel.isPanning = true

@@ -20,6 +20,7 @@ import org.mwalker.bookmarkcanvas.ui.CanvasColors
 import org.mwalker.bookmarkcanvas.ui.CanvasConstants
 import com.intellij.openapi.util.TextRange
 import java.awt.*
+import javax.swing.SwingUtilities
 
 /**
  * Manages UI components for a NodeComponent
@@ -165,12 +166,22 @@ class NodeUIManager(
             if (cachedSnippet != null) {
                 LOG.info("Using cached snippet for node: ${node.id}")
                 highlightedSnippet = cachedSnippet
+                
+                // Ensure cached snippet has correct zoom factor applied
+                val canvasPanel = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, nodeComponent)
+                val currentZoomFactor = if (canvasPanel != null) (canvasPanel as CanvasPanel).zoomFactor else 1.0
+                cachedSnippet.updateZoomFactor(currentZoomFactor)
             } else {
                 LOG.info("Creating new snippet highlighter for node: ${node.id}")
                 // Create a new highlighter and cache it
                 val newHighlighter = KotlinSnippetHighlighter(project)
                 highlightedSnippet = newHighlighter
                 highlightedSnippetCache[cacheKey] = newHighlighter
+                
+                // Apply current zoom factor to the new highlighter
+                val canvasPanel = SwingUtilities.getAncestorOfClass(CanvasPanel::class.java, nodeComponent)
+                val currentZoomFactor = if (canvasPanel != null) (canvasPanel as CanvasPanel).zoomFactor else 1.0
+                newHighlighter.updateZoomFactor(currentZoomFactor)
                 
                 // For proper highlighting, we need the full document content
                 val fullCode = getFullDocumentContent(project, node.filePath)
@@ -193,13 +204,20 @@ class NodeUIManager(
                         
                         // Display the highlighted snippet with the appropriate file type
                         newHighlighter.displayHighlightedSnippet(fullCode, TextRange(startOffset, endOffset), extension)
+                        
+                        // Ensure zoom factor is applied after content is displayed
+                        newHighlighter.updateZoomFactor(currentZoomFactor)
                     } catch (e: Exception) {
                         LOG.error("Error highlighting snippet", e)
                         newHighlighter.displayPlainText(code)
+                        // Apply zoom factor even for plain text
+                        newHighlighter.updateZoomFactor(currentZoomFactor)
                     }
                 } else {
                     // Fallback to plain text
                     newHighlighter.displayPlainText(code)
+                    // Apply zoom factor for plain text too
+                    newHighlighter.updateZoomFactor(currentZoomFactor)
                 }
             }
             

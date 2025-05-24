@@ -43,6 +43,13 @@ class NodeContextMenuManager(
         }
         menu.add(editTitleItem)
 
+        // Edit source option
+        val editSourceItem = JMenuItem("Edit Source")
+        editSourceItem.addActionListener {
+            showEditSourceDialog()
+        }
+        menu.add(editSourceItem)
+
         // Toggle code snippet option
         val toggleSnippetItem = JMenuItem(
             if (node.showCodeSnippet) "Hide Code Snippet" else "Show Code Snippet"
@@ -130,10 +137,35 @@ class NodeContextMenuManager(
     }
     
     /**
+     * Shows a dialog to edit the source information
+     */
+    private fun showEditSourceDialog() {
+        val dialog = EditSourceDialog(project, node)
+        if (dialog.showAndGet()) {
+            // Invalidate cached code snippet to ensure fresh content is displayed
+            NodeUIManager.invalidateSnippetCache(node.id)
+            
+            // Refresh the node component layout to reflect changes
+            (nodeComponent as? NodeComponentInternal)?.refreshLayout()
+            
+            // Update title if using default name (no custom displayName)
+            if (node.displayName == null) {
+                (nodeComponent as? NodeComponentInternal)?.updateTitle(node.getDisplayText())
+            }
+            
+            // Save changes
+            saveCanvasState()
+        }
+    }
+    
+    /**
      * Toggles the display of code snippet
      */
     private fun toggleCodeSnippet() {
         node.showCodeSnippet = !node.showCodeSnippet
+
+        // Refresh content since multi-line content may need to be captured or cleared
+        node.refreshContent(project)
 
         // Signal the node component to update its layout
         (nodeComponent as? NodeComponentInternal)?.refreshLayout()
@@ -171,6 +203,9 @@ class NodeContextMenuManager(
                 if (parts.size == 2) {
                     node.contextLinesBefore = parts[0].trim().toInt()
                     node.contextLinesAfter = parts[1].trim().toInt()
+
+                    // Refresh content to capture new context lines
+                    node.refreshContent(project)
 
                     if (node.showCodeSnippet) {
                         // Signal to refresh the layout with new context lines

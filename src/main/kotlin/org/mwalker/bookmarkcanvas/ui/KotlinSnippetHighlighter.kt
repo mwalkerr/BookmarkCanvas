@@ -61,13 +61,17 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
         if (resultArea == null) {
             resultArea = JTextArea()
             resultArea!!.isEditable = false
-            resultArea!!.font = Font("Monospaced", Font.PLAIN, 12)
             val currentScheme = EditorColorsManager.getInstance().getSchemeForCurrentUITheme()
             resultArea!!.background = currentScheme.defaultBackground
             resultArea!!.foreground = currentScheme.defaultForeground
             resultArea!!.lineWrap = true
             resultArea!!.wrapStyleWord = true
         }
+        
+        // Apply current zoom factor to font size
+        val baseFontSize = 12
+        val scaledFontSize = (baseFontSize * currentZoomFactor).toInt()
+        resultArea!!.font = Font("Monospaced", Font.PLAIN, scaledFontSize)
         
         resultArea!!.text = text
         
@@ -104,6 +108,11 @@ class KotlinSnippetHighlighter(private val project: Project) : JBPanel<KotlinSni
         // If we have segments to display, recreate the component with the new zoom
         if (currentSegments != null && currentColorsScheme != null) {
             recreateSnippetComponent()
+        } else if (resultArea != null) {
+            // Update font size for plain text display
+            val baseFontSize = 12
+            val scaledFontSize = (baseFontSize * currentZoomFactor).toInt()
+            resultArea!!.font = Font("Monospaced", Font.PLAIN, scaledFontSize)
         }
     }
     

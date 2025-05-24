@@ -19,6 +19,7 @@ data class BookmarkNode(
     var filePath: String,
     var lineNumber0Based: Int,
     var lineContent: String? = null, // Content of the line for relocation
+    var multiLineContent: List<String>? = null, // Content of all lines for multi-line bookmarks
     var positionX: Int = 100, // Default X position
     var positionY: Int = 100, // Default Y position
     var width: Int = 0, // Width of the node (0 means use default size)
@@ -45,7 +46,8 @@ data class BookmarkNode(
         bookmarkId = bookmarkId,
         displayName = displayName,
         filePath = filePath,
-        lineNumber0Based = lineNumber
+        lineNumber0Based = lineNumber,
+        multiLineContent = null
     )
     
     /**
@@ -96,11 +98,23 @@ data class BookmarkNode(
         // Get the content of the snippet
         val snippetText = document.getText(TextRange(startOffset, endOffset))
         
-        // Update line content if it's null
+        // Update line content and multi-line content if needed
         if (lineContent == null && startLine <= lineNumber0Based && lineNumber0Based <= endLine) {
             val lineStart = document.getLineStartOffset(lineNumber0Based)
             val lineEnd = document.getLineEndOffset(lineNumber0Based)
             lineContent = document.getText(TextRange(lineStart, lineEnd))
+        }
+        
+        // For multi-line bookmarks (when showing code snippet with context lines), capture all lines
+        if (showCodeSnippet && contextLinesAfter > 0 && multiLineContent == null) {
+            val actualEndLine = minOf(document.lineCount - 1, lineNumber0Based + contextLinesAfter)
+            val capturedLines = mutableListOf<String>()
+            for (line in lineNumber0Based..actualEndLine) {
+                val lineStart = document.getLineStartOffset(line)
+                val lineEnd = document.getLineEndOffset(line)
+                capturedLines.add(document.getText(TextRange(lineStart, lineEnd)))
+            }
+            multiLineContent = capturedLines
         }
         
         // Normalize indentation to start at 0
@@ -153,6 +167,7 @@ data class BookmarkNode(
     }
 
     fun navigateToBookmark(project: Project) {
+        LOG.info("now navigating to bookmark for file: $filePath, line: ${lineNumber0Based + 1}")
         // Handle both absolute paths and project-relative paths
         val file = if (filePath.startsWith("/") || filePath.contains(":\\")) {
             // Absolute path
@@ -161,71 +176,175 @@ data class BookmarkNode(
             // Project-relative path
             project.baseDir.findFileByRelativePath(filePath)
         }
-        if (file != null) {
-            // Open the file in the editor
-            val fileEditorManager = FileEditorManager.getInstance(project)
-            fileEditorManager.openFile(file, true)
-            
-            // Get the document from the file
-            val psiFile = PsiManager.getInstance(project).findFile(file)
-            if (psiFile != null) {
-                val document = psiFile.viewProvider.document
-                if (document != null) {
-                    // If this is a selected text bookmark with multiple lines, select those lines
-                    if (showCodeSnippet && contextLinesAfter > 0) {
-                        try {
-                            val startLine = lineNumber0Based
-                            val endLine = lineNumber0Based + contextLinesAfter
-                            
-                            // Get the start and end offsets
-                            val startOffset = document.getLineStartOffset(startLine)
-                            val endOffset = document.getLineEndOffset(endLine)
-                            
-                            // Navigate and select
-                            val editor = fileEditorManager.selectedTextEditor
-                            if (editor != null) {
-                                // Move to the start of the selection
-                                editor.caretModel.moveToOffset(startOffset)
-                                editor.selectionModel.setSelection(startOffset, endOffset)
-                                editor.scrollingModel.scrollToCaret(
-                                    com.intellij.openapi.editor.ScrollType.CENTER
-                                )
-                                return
-                            }
-                        } catch (e: Exception) {
-                            LOG.error("Error selecting lines", e)
-                            // Fall back to regular navigation if selection fails
+        if (file == null) {
+            LOG.warn("File not found: $filePath")
+            return
+        }
+        // Open the file in the editor
+        val fileEditorManager = FileEditorManager.getInstance(project)
+        fileEditorManager.openFile(file, true)
+
+        // Get the document from the file
+        val psiFile = PsiManager.getInstance(project).findFile(file)
+        if (psiFile == null) {
+            LOG.warn("Cannot read file: $filePath")
+            return
+        }
+        val document = psiFile.viewProvider.document
+        if (document == null) {
+            LOG.warn("File not found: $filePath")
+            return
+        }
+        // If this is a selected text bookmark with multiple lines, first check relocation then select those lines
+        if (showCodeSnippet && contextLinesAfter > 0) {
+//            LOG.info("Navigating to multi-line bookmark at line $lineNumber0Based with context lines after: $contextLinesAfter")
+            // First, check if we need to relocate using multi-line content
+            if (multiLineContent != null && multiLineContent!!.isNotEmpty()) {
+//                LOG.info("Checking multi-line content for relocation at line $lineNumber0Based")
+                val currentLinesMatch = checkMultiLineContentMatch(document, lineNumber0Based, multiLineContent!!)
+//                LOG.info("Current lines match: $currentLinesMatch")
+                if (!currentLinesMatch) {
+//                    LOG.info("Multi-line content no longer matches for selection, trying to relocate")
+                    findMultiLineContentByContent(document, multiLineContent!!, lineNumber0Based)?.let { newStartLine ->
+//                        LOG.info("Found multi-line content moved from $lineNumber0Based to $newStartLine for selection")
+                        // Validate the new line number is within bounds
+                        if (newStartLine >= 0 && newStartLine < document.lineCount) {
+                            this.lineNumber0Based = newStartLine
+                        } else {
+                            LOG.warn("New start line $newStartLine is out of bounds for document with ${document.lineCount} lines")
                         }
-                    }
-                
-                    // Regular bookmark handling
-                    val currentLineContents = document.text.split("\n").getOrNull(lineNumber0Based)
-                    // First try to find exact line
-                    if (lineNumber0Based >= 0 && lineNumber0Based < document.lineCount && currentLineContents?.trim() == lineContent?.trim()) {
-                        navigateToLine(fileEditorManager, document, lineNumber0Based)
-                    } 
-                    // If we stored the line content, try to find by content
-                    else if (lineContent != null && lineContent!!.isNotBlank()) {
-                        findLineNumber0BasedByContent(document, lineContent!!)?.let { lineNumber0Based ->
-                            navigateToLine(fileEditorManager, document, lineNumber0Based)
-                            // Update the line number to the new position
-                            if (lineNumber0Based != this.lineNumber0Based) {
-                                LOG.info("Updating line number from ${this.lineNumber0Based} to $lineNumber0Based")
-                                this.lineNumber0Based = lineNumber0Based
-                                
-                                // Refresh node UI if displayName is null (using default name)
-                                if (displayName == null) {
-                                    // Find component in UI tree and update it
-                                    SwingUtilities.invokeLater {
-                                        findNodeComponentAndUpdate(project)
-                                    }
-                                }
+                        
+                        // Refresh node UI if displayName is null (using default name)
+                        if (displayName == null) {
+                            SwingUtilities.invokeLater {
+                                findNodeComponentAndUpdate(project)
                             }
                         }
                     }
                 }
             }
+            
+            try {
+                val startLine = lineNumber0Based
+                val endLine = minOf(lineNumber0Based + contextLinesAfter, document.lineCount - 1)
+
+                // Validate line bounds
+                if (startLine >= document.lineCount || startLine < 0) {
+                    LOG.warn("Start line $startLine is out of bounds for document with ${document.lineCount} lines")
+                    return
+                }
+
+                // Get the start and end offsets
+                val startOffset = document.getLineStartOffset(startLine)
+                val endOffset = document.getLineEndOffset(endLine)
+
+                // Navigate and select
+                val editor = fileEditorManager.selectedTextEditor
+                if (editor != null) {
+                    // Move to the start of the selection
+                    editor.caretModel.moveToOffset(startOffset)
+                    editor.selectionModel.setSelection(startOffset, endOffset)
+                    editor.scrollingModel.scrollToCaret(
+                        com.intellij.openapi.editor.ScrollType.CENTER
+                    )
+                    
+                    // Compare current code snippet with stored content to detect changes
+                    val snippetChanged = hasCodeSnippetChanged(document)
+                    
+                    // Refresh content after navigation
+                    refreshContent(project)
+                    
+                    // If snippet content changed, invalidate cache and update UI
+                    if (snippetChanged) {
+                        invalidateCacheAndUpdateUI(project)
+                    }
+                    
+                    return
+                }
+            } catch (e: Exception) {
+                LOG.error("Error selecting lines", e)
+                // Fall back to regular navigation if selection fails
+            }
         }
+
+        // Regular bookmark handling
+        var relocated = false
+        
+        // First, try to relocate using multi-line content if available
+        if (showCodeSnippet && contextLinesAfter > 0 && multiLineContent != null && multiLineContent!!.isNotEmpty()) {
+            val currentLinesMatch = checkMultiLineContentMatch(document, lineNumber0Based, multiLineContent!!)
+            if (!currentLinesMatch) {
+                LOG.info("Multi-line content no longer matches, trying to relocate")
+                findMultiLineContentByContent(document, multiLineContent!!, lineNumber0Based)?.let { newStartLine ->
+                    LOG.info("Found multi-line content moved from $lineNumber0Based to $newStartLine")
+                    // Validate the new line number is within bounds
+                    if (newStartLine >= 0 && newStartLine < document.lineCount) {
+                        this.lineNumber0Based = newStartLine
+                        relocated = true
+                    } else {
+                        LOG.warn("New start line $newStartLine is out of bounds for document with ${document.lineCount} lines")
+                    }
+                    
+                    // Refresh node UI if displayName is null (using default name)
+                    if (displayName == null) {
+                        SwingUtilities.invokeLater {
+                            findNodeComponentAndUpdate(project)
+                        }
+                    }
+                }
+            } else {
+                // Multi-line content still matches at current location
+                relocated = true
+            }
+        }
+        
+        // If multi-line relocation failed or not applicable, try single-line relocation
+        if (!relocated && lineContent != null && lineContent!!.isNotBlank()) {
+            val currentLineContent = document.text.split("\n").getOrNull(lineNumber0Based)?.trim()
+            val storedLineContent = lineContent?.trim()
+            
+            // If content doesn't match, try to find by content
+            if (currentLineContent != storedLineContent) {
+                LOG.info("Content at line $lineNumber0Based no longer matches, trying to find by content")
+                findLineNumber0BasedByContent(document, lineContent!!)?.let { newLineNumber ->
+                    // Update the line number to the new position
+                    if (newLineNumber != this.lineNumber0Based) {
+                        LOG.info("Updating line number from ${this.lineNumber0Based} to $newLineNumber")
+                        // Validate the new line number is within bounds
+                        if (newLineNumber >= 0 && newLineNumber < document.lineCount) {
+                            this.lineNumber0Based = newLineNumber
+                            relocated = true
+                        } else {
+                            LOG.warn("New line number $newLineNumber is out of bounds for document with ${document.lineCount} lines")
+                        }
+
+                        // Refresh node UI if displayName is null (using default name)
+                        if (displayName == null) {
+                            // Find component in UI tree and update it
+                            SwingUtilities.invokeLater {
+                                findNodeComponentAndUpdate(project)
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Single-line content still matches
+                relocated = true
+            }
+        }
+        
+        // Compare current code snippet with stored content to detect changes
+        val snippetChanged = hasCodeSnippetChanged(document)
+        
+        // Always refresh the current content from the file (after potential relocation)
+        refreshContent(project)
+        
+        // If snippet content changed, invalidate cache and update UI
+        if (snippetChanged) {
+            invalidateCacheAndUpdateUI(project)
+        }
+        
+        navigateToLine(fileEditorManager, document, lineNumber0Based)
     }
     
     /**
@@ -266,6 +385,125 @@ data class BookmarkNode(
 
         return closestLine
     }
+    
+    /**
+     * Checks if the multi-line content still matches at the expected location
+     */
+    private fun checkMultiLineContentMatch(document: Document, startLine: Int, expectedContent: List<String>): Boolean {
+        if (startLine < 0 || startLine >= document.lineCount) return false
+        
+        val documentLines = document.text.lines()
+        for (i in expectedContent.indices) {
+            val currentLine = startLine + i
+            if (currentLine >= documentLines.size) return false
+            
+            val expectedLine = expectedContent[i].trim()
+            val actualLine = documentLines[currentLine].trim()
+            
+            if (expectedLine != actualLine) return false
+        }
+        return true
+    }
+    
+    /**
+     * Finds where the multi-line content block has moved to in the document
+     */
+    private fun findMultiLineContentByContent(document: Document, expectedContent: List<String>, originalLineNumber: Int): Int? {
+        if (expectedContent.isEmpty()) return null
+        
+        val documentLines = document.text.lines()
+        val contentSize = expectedContent.size
+        
+        // Search for the first line and then verify the rest of the block
+        val firstLineContent = expectedContent[0].trim()
+        if (firstLineContent.isEmpty()) return null
+        
+        var bestMatch: Int? = null
+        var minDistance = Int.MAX_VALUE
+        
+        for (startLine in 0 until documentLines.size - contentSize + 1) {
+            if (documentLines[startLine].trim() == firstLineContent) {
+                // Check if the entire block matches at this position
+                var allMatch = true
+                for (i in expectedContent.indices) {
+                    val lineIndex = startLine + i
+                    if (lineIndex >= documentLines.size) {
+                        allMatch = false
+                        break
+                    }
+                    
+                    val expectedLine = expectedContent[i].trim()
+                    val actualLine = documentLines[lineIndex].trim()
+                    
+                    if (expectedLine != actualLine) {
+                        allMatch = false
+                        break
+                    }
+                }
+                
+                if (allMatch) {
+                    val distance = kotlin.math.abs(startLine - originalLineNumber)
+                    if (distance < minDistance) {
+                        minDistance = distance
+                        bestMatch = startLine
+                    }
+                }
+            }
+        }
+        
+        return bestMatch
+    }
+    
+    /**
+     * Refreshes the stored content for this bookmark from the current file state
+     */
+    fun refreshContent(project: Project) {
+        LOG.info("Refreshing content for bookmark at file: $filePath, line: ${lineNumber0Based + 1}")
+        try {
+            // Handle both absolute paths and project-relative paths
+            val file = if (filePath.startsWith("/") || filePath.contains(":\\")) {
+                // Absolute path
+                com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath)
+            } else {
+                // Project-relative path
+                project.baseDir.findFileByRelativePath(filePath)
+            } ?: return
+            
+            val psiFile = PsiManager.getInstance(project).findFile(file) ?: return
+            val document = psiFile.viewProvider.document ?: return
+            
+            // Update single line content
+            if (lineNumber0Based >= 0 && lineNumber0Based < document.lineCount) {
+                val lineStart = document.getLineStartOffset(lineNumber0Based)
+                val lineEnd = document.getLineEndOffset(lineNumber0Based)
+                lineContent = document.getText(TextRange(lineStart, lineEnd))
+                LOG.info("Updated line content for bookmark at line ${lineNumber0Based + 1}: $lineContent")
+            }
+            
+            // Update multi-line content for multi-line bookmarks
+            if (showCodeSnippet && contextLinesAfter > 0) {
+                val actualEndLine = minOf(document.lineCount - 1, lineNumber0Based + contextLinesAfter)
+                val capturedLines = mutableListOf<String>()
+                
+                // Validate bounds before capturing lines
+                if (lineNumber0Based >= 0 && lineNumber0Based < document.lineCount) {
+                    for (line in lineNumber0Based..actualEndLine) {
+                        val lineStart = document.getLineStartOffset(line)
+                        val lineEnd = document.getLineEndOffset(line)
+                        val text = document.getText(TextRange(lineStart, lineEnd)).trim()
+                        LOG.info("Captured line $line: $text")
+                        capturedLines.add(text)
+                    }
+                    multiLineContent = capturedLines
+                }
+            }
+            
+            LOG.info("Refreshed content for bookmark at line ${lineNumber0Based + 1}")
+        } catch (e: Exception) {
+            LOG.error("Error refreshing bookmark content", e)
+        }
+    }
+    
     /**
      * Finds the NodeComponent in the UI tree that represents this BookmarkNode
      * and updates its display
@@ -293,6 +531,123 @@ data class BookmarkNode(
         } catch (e: Exception) {
             // Log error but don't crash if UI update fails
             // This is a best-effort update
+        }
+    }
+    
+    /**
+     * Checks if the current code snippet in the file differs from what was previously stored
+     */
+    private fun hasCodeSnippetChanged(document: Document): Boolean {
+        try {
+            // Only check snippet changes for nodes that show code snippets
+            if (!showCodeSnippet) {
+                // For non-snippet nodes, just check the main line content
+                if (lineContent != null && lineNumber0Based >= 0 && lineNumber0Based < document.lineCount) {
+                    val lineStart = document.getLineStartOffset(lineNumber0Based)
+                    val lineEnd = document.getLineEndOffset(lineNumber0Based)
+                    val currentLineText = document.getText(TextRange(lineStart, lineEnd)).trimEnd()
+                    val storedLineText = lineContent!!.trimEnd()
+                    return currentLineText != storedLineText
+                }
+                return false
+            }
+            
+            // Get the current snippet from the document
+            val startLine = maxOf(0, lineNumber0Based - contextLinesBefore)
+            val endLine = minOf(document.lineCount - 1, lineNumber0Based + contextLinesAfter)
+            
+            if (startLine >= document.lineCount || lineNumber0Based < 0) {
+                return true // File structure changed significantly
+            }
+            
+            val currentLines = mutableListOf<String>()
+            for (line in startLine..endLine) {
+                if (line < document.lineCount) {
+                    val lineStart = document.getLineStartOffset(line)
+                    val lineEnd = document.getLineEndOffset(line)
+                    val lineText = document.getText(TextRange(lineStart, lineEnd)).trimEnd()
+                    currentLines.add(lineText)
+                }
+            }
+            
+            // Get stored content for comparison
+            val storedLines = getStoredSnippetLines()
+            if (storedLines.isEmpty()) {
+                return true // No previous content stored, consider it changed
+            }
+            
+            // Compare line by line
+            if (currentLines.size != storedLines.size) {
+                LOG.info("Code snippet changed: line count differs (${currentLines.size} vs ${storedLines.size})")
+                return true
+            }
+            
+            for (i in currentLines.indices) {
+                val currentLine = currentLines[i].trimEnd()
+                val storedLine = storedLines[i].trimEnd()
+                if (currentLine != storedLine) {
+                    LOG.info("Code snippet changed at line ${startLine + i}: '$storedLine' -> '$currentLine'")
+                    return true
+                }
+            }
+            
+            return false
+        } catch (e: Exception) {
+            LOG.error("Error checking if code snippet changed", e)
+            return true // Assume changed if we can't determine
+        }
+    }
+    
+    /**
+     * Gets the stored snippet lines for comparison
+     */
+    private fun getStoredSnippetLines(): List<String> {
+        // For multi-line bookmarks with stored content, return the stored lines
+        if (showCodeSnippet && multiLineContent != null && multiLineContent!!.isNotEmpty()) {
+            return multiLineContent!!
+        }
+        
+        // For single-line bookmarks, we need to reconstruct the context
+        // This is an approximation - we'll return what we can from stored content
+        if (lineContent != null) {
+            return listOf(lineContent!!)
+        }
+        
+        return emptyList()
+    }
+    
+    /**
+     * Invalidates the UI cache and updates the node component
+     */
+    private fun invalidateCacheAndUpdateUI(project: Project) {
+        LOG.info("Code snippet changed for node ${id}, invalidating cache and updating UI")
+        SwingUtilities.invokeLater {
+            try {
+                // Invalidate the snippet cache
+                val toolWindowManager = ToolWindowManager.getInstance(project)
+                val toolWindow = toolWindowManager.getToolWindow("BookmarkCanvas")
+                if (toolWindow != null) {
+                    val content = toolWindow.contentManager.getContent(0)
+                    if (content != null) {
+                        val canvasToolbar = content.component as? org.mwalker.bookmarkcanvas.ui.CanvasToolbar
+                        canvasToolbar?.let { toolbar ->
+                            // Find the node component and invalidate its cache
+                            toolbar.findNodeComponent(this.id)?.let { nodeComponent ->
+                                // Use the NodeUIManager to invalidate cache
+                                org.mwalker.bookmarkcanvas.ui.NodeUIManager.invalidateSnippetCache(this.id)
+                                
+                                // Refresh the component layout
+                                if (nodeComponent is org.mwalker.bookmarkcanvas.ui.NodeComponent) {
+                                    nodeComponent.refreshLayout()
+                                    nodeComponent.repaint()
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                LOG.error("Error invalidating cache and updating UI", e)
+            }
         }
     }
 }

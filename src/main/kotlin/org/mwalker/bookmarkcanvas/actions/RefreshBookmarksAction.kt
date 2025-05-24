@@ -70,8 +70,8 @@ object BookmarkValidator {
      * Returns true if the bookmark is valid (either as-is or after relocation)
      */
     fun verifyBookmarkLineNumber(project: Project, node: BookmarkNode): Boolean {
-        // Skip if no line content is saved
-        if (node.lineContent.isNullOrBlank()) {
+        // Skip if no line content is saved for either single-line or multi-line bookmarks
+        if (node.lineContent.isNullOrBlank() && node.multiLineContent.isNullOrEmpty()) {
             return true // Assume valid if we don't have content to verify
         }
         
@@ -91,6 +91,29 @@ object BookmarkValidator {
             val document = psiFile.viewProvider.document
                 ?: return false // Cannot read document
                 
+            // Handle multi-line bookmarks first
+            if (node.showCodeSnippet && node.contextLinesAfter > 0 && 
+                !node.multiLineContent.isNullOrEmpty()) {
+                
+                // Check if multi-line content still matches at current location
+                if (checkMultiLineContentMatch(document, node.lineNumber0Based, node.multiLineContent!!)) {
+                    return true
+                }
+                
+                // Try to find the multi-line content elsewhere
+                val newStartLine = findMultiLineContentByContent(document, node.multiLineContent!!, node.lineNumber0Based)
+                if (newStartLine != null) {
+                    LOG.info("Updated multi-line bookmark from line ${node.lineNumber0Based} to $newStartLine")
+                    node.lineNumber0Based = newStartLine
+                    // Refresh content after line number change
+                    node.refreshContent(project)
+                    return true
+                }
+                
+                return false
+            }
+            
+            // Handle single-line bookmarks
             // Check if current line matches stored content
             val lineContent = if (node.lineNumber0Based >= 0 && node.lineNumber0Based < document.lineCount) {
                 val lineStart = document.getLineStartOffset(node.lineNumber0Based)
@@ -128,6 +151,8 @@ object BookmarkValidator {
             if (bestMatchLine != null) {
                 LOG.info("Updated bookmark line from ${node.lineNumber0Based} to $bestMatchLine")
                 node.lineNumber0Based = bestMatchLine!!
+                // Refresh content after line number change
+                node.refreshContent(project)
                 return true
             }
             
@@ -137,6 +162,74 @@ object BookmarkValidator {
             LOG.error("Error verifying bookmark line", e)
             return false
         }
+    }
+    
+    /**
+     * Checks if the multi-line content still matches at the expected location
+     */
+    private fun checkMultiLineContentMatch(document: com.intellij.openapi.editor.Document, startLine: Int, expectedContent: List<String>): Boolean {
+        if (startLine < 0 || startLine >= document.lineCount) return false
+        
+        val documentLines = document.text.lines()
+        for (i in expectedContent.indices) {
+            val currentLine = startLine + i
+            if (currentLine >= documentLines.size) return false
+            
+            val expectedLine = expectedContent[i].trim()
+            val actualLine = documentLines[currentLine].trim()
+            
+            if (expectedLine != actualLine) return false
+        }
+        return true
+    }
+    
+    /**
+     * Finds where the multi-line content block has moved to in the document
+     */
+    private fun findMultiLineContentByContent(document: com.intellij.openapi.editor.Document, expectedContent: List<String>, originalLineNumber: Int): Int? {
+        if (expectedContent.isEmpty()) return null
+        
+        val documentLines = document.text.lines()
+        val contentSize = expectedContent.size
+        
+        // Search for the first line and then verify the rest of the block
+        val firstLineContent = expectedContent[0].trim()
+        if (firstLineContent.isEmpty()) return null
+        
+        var bestMatch: Int? = null
+        var minDistance = Int.MAX_VALUE
+        
+        for (startLine in 0 until documentLines.size - contentSize + 1) {
+            if (documentLines[startLine].trim() == firstLineContent) {
+                // Check if the entire block matches at this position
+                var allMatch = true
+                for (i in expectedContent.indices) {
+                    val lineIndex = startLine + i
+                    if (lineIndex >= documentLines.size) {
+                        allMatch = false
+                        break
+                    }
+                    
+                    val expectedLine = expectedContent[i].trim()
+                    val actualLine = documentLines[lineIndex].trim()
+                    
+                    if (expectedLine != actualLine) {
+                        allMatch = false
+                        break
+                    }
+                }
+                
+                if (allMatch) {
+                    val distance = kotlin.math.abs(startLine - originalLineNumber)
+                    if (distance < minDistance) {
+                        minDistance = distance
+                        bestMatch = startLine
+                    }
+                }
+            }
+        }
+        
+        return bestMatch
     }
 }
 

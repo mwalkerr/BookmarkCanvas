@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.mwalker.bookmarkcanvas"
-version = "1.0.10"
+version = "1.0.13"
 
 repositories {
     mavenCentral()

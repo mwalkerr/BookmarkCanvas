@@ -15,11 +15,11 @@
                     icon="/icons/book-bookmark-solid.svg"
                     anchor="right"
                     factoryClass="org.mwalker.bookmarkcanvas.ui.CanvasToolWindow"/>
-        <toolWindow id="BookmarkCanvasWeb"
-                    secondary="true"
-                    icon="/icons/book-bookmark-solid.svg"
-                    anchor="right"
-                    factoryClass="org.mwalker.bookmarkcanvas.ui.WebViewCanvasToolWindow"/>
+<!--        <toolWindow id="BookmarkCanvasWeb"-->
+<!--                    secondary="true"-->
+<!--                    icon="/icons/book-bookmark-solid.svg"-->
+<!--                    anchor="right"-->
+<!--                    factoryClass="org.mwalker.bookmarkcanvas.ui.WebViewCanvasToolWindow"/>-->
         <applicationService 
             serviceImplementation="org.mwalker.bookmarkcanvas.services.CanvasPersistenceService"/>
     </extensions>

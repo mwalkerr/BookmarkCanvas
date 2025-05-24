@@ -57,6 +57,9 @@ class SerializableNode : BaseState() {
     var contextLinesAfter by property(3)
     
     companion object {
+
+
+
         private val LOG = Logger.getInstance(SerializableNode::class.java)
         fun fromBookmarkNode(node: BookmarkNode): SerializableNode {
             return SerializableNode().apply {
