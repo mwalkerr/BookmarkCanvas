@@ -2,9 +2,6 @@ package org.mwalker.bookmarkcanvas.ui
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.ui.jcef.JBCefBrowser
-import com.intellij.ui.jcef.JBCefClient
-import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -20,6 +17,7 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.intellij.ui.jcef.*
 
 /**
  * Web-based canvas panel using JCEF WebView
@@ -49,8 +47,12 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
     }
 
     init {
+//        LOG.info("JBCefApp.isSupported()?: ${JBCefApp.isSupported()}")
         browser = JBCefBrowser()
-        
+        // give the browser an obvious border and background to make sure it's rendering properly
+        browser.component.border = javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        browser.component.background = java.awt.Color.BLUE
+
         // Set up JS queries for communication
         addBookmarkQuery = setupAddBookmarkQuery()
         clearCanvasQuery = setupClearCanvasQuery()
@@ -84,22 +86,130 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
     
     private fun loadCanvasHtml() {
         try {
-            // Get the HTML file from resources
-            val htmlFile = this::class.java.getResource("/web/canvas.html")
-            if (htmlFile != null) {
-                browser.loadURL(htmlFile.toString())
+            LOG.info("Loading canvas HTML file")
+            
+            // Load the actual canvas HTML by reading it from resources and using loadHTML
+            val canvasHtml = loadCanvasHtmlFromResources()
+            if (canvasHtml != null) {
+                browser.loadHTML(canvasHtml)
+                LOG.info("Canvas HTML loaded via loadHTML")
             } else {
-                // Fallback: try to load from file system if running in development
-                val resourcesPath = Paths.get("src/main/resources/web/canvas.html")
-                if (resourcesPath.toFile().exists()) {
-                    browser.loadURL("file://${resourcesPath.toAbsolutePath()}")
-                } else {
-                    LOG.error("Could not find canvas.html file")
-                }
+                LOG.error("Could not load canvas HTML from resources")
+                // Fallback to test HTML
+                loadTestHtml()
             }
         } catch (e: Exception) {
             LOG.error("Error loading canvas HTML", e)
+            // Fallback to test HTML
+            loadTestHtml()
         }
+    }
+    
+    private fun loadCanvasHtmlFromResources(): String? {
+        return try {
+            // First try to load from resources
+            val htmlStream = this::class.java.getResourceAsStream("/web/canvas.html")
+            if (htmlStream != null) {
+                val htmlContent = htmlStream.bufferedReader().use { it.readText() }
+                
+                // Also load CSS and JS content and embed them inline
+                val cssContent = this::class.java.getResourceAsStream("/web/canvas.css")?.bufferedReader()?.use { it.readText() }
+                val jsContent = this::class.java.getResourceAsStream("/web/canvas.js")?.bufferedReader()?.use { it.readText() }
+                
+                // Replace external references with inline content
+                var modifiedHtml = htmlContent
+                if (cssContent != null) {
+                    modifiedHtml = modifiedHtml.replace(
+                        """<link rel="stylesheet" href="canvas.css">""",
+                        "<style>\n$cssContent\n</style>"
+                    )
+                }
+                if (jsContent != null) {
+                    modifiedHtml = modifiedHtml.replace(
+                        """<script src="canvas.js"></script>""",
+                        "<script>\n$jsContent\n</script>"
+                    )
+                }
+                
+                LOG.info("Successfully loaded and processed canvas HTML from resources")
+                modifiedHtml
+            } else {
+                // Try loading from file system for development
+                val resourcesPath = Paths.get("src/main/resources/web/canvas.html")
+                if (resourcesPath.toFile().exists()) {
+                    val htmlContent = resourcesPath.toFile().readText()
+                    val cssPath = Paths.get("src/main/resources/web/canvas.css")
+                    val jsPath = Paths.get("src/main/resources/web/canvas.js")
+                    
+                    var modifiedHtml = htmlContent
+                    if (cssPath.toFile().exists()) {
+                        val cssContent = cssPath.toFile().readText()
+                        modifiedHtml = modifiedHtml.replace(
+                            """<link rel="stylesheet" href="canvas.css">""",
+                            "<style>\n$cssContent\n</style>"
+                        )
+                    }
+                    if (jsPath.toFile().exists()) {
+                        val jsContent = jsPath.toFile().readText()
+                        modifiedHtml = modifiedHtml.replace(
+                            """<script src="canvas.js"></script>""",
+                            "<script>\n$jsContent\n</script>"
+                        )
+                    }
+                    
+                    LOG.info("Successfully loaded and processed canvas HTML from file system")
+                    modifiedHtml
+                } else {
+                    LOG.error("Could not find canvas.html in resources or file system")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            LOG.error("Error reading canvas HTML", e)
+            null
+        }
+    }
+    
+    private fun loadTestHtml() {
+        val testHtml = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>BookmarkCanvas WebView Test</title>
+                <style>
+                    body { 
+                        background-color: #1e1e1e; 
+                        color: #ffffff; 
+                        font-size: 18px; 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        text-align: center;
+                        margin: 20px;
+                    }
+                    .working { color: #4CAF50; }
+                    .error { color: #f44336; }
+                    .status { margin: 10px 0; padding: 10px; border: 1px solid #333; border-radius: 4px; }
+                </style>
+            </head>
+            <body>
+                <h1>BookmarkCanvas WebView - Fallback</h1>
+                <div class="status error">Canvas HTML failed to load</div>
+                <div class="status working">✓ JCEF Browser is working!</div>
+                <div class="status working">✓ HTML rendering is functional</div>
+                <div class="status working">✓ CSS styling is applied</div>
+                <div id="js-test" class="status error">✗ JavaScript test pending...</div>
+                
+                <script>
+                    console.log('JavaScript is executing in BookmarkCanvas WebView');
+                    document.getElementById('js-test').innerHTML = '✓ JavaScript is working!';
+                    document.getElementById('js-test').className = 'status working';
+                </script>
+            </body>
+            </html>
+        """.trimIndent()
+        
+        browser.loadHTML(testHtml)
+        LOG.info("Loaded fallback test HTML")
     }
     
     private fun setupJavaScriptBridge() {
@@ -152,9 +262,9 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
         
         browser.cefBrowser.executeJavaScript(bridgeScript, "", 0)
     }
-    
+
     private fun setupAddBookmarkQuery(): JBCefJSQuery {
-        return JBCefJSQuery.create(browser as JBCefBrowser).also { query ->
+        return JBCefJSQuery.create(browser as JBCefBrowserBase).also { query ->
             query.addHandler { request ->
                 SwingUtilities.invokeLater {
                     try {
@@ -168,7 +278,7 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
             }
         }
     }
-    
+
     private fun setupClearCanvasQuery(): JBCefJSQuery {
         return JBCefJSQuery.create(browser as JBCefBrowser).also { query ->
             query.addHandler { _ ->
