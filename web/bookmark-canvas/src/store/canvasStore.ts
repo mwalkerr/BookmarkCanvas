@@ -23,6 +23,8 @@ type BookmarkConnection = {
   source: string;
   target: string;
   type?: 'default' | 'straight' | 'step' | 'smoothstep';
+  sourceHandle?: string;
+  targetHandle?: string;
 };
 
 type CanvasState = {
@@ -40,12 +42,54 @@ interface CanvasStore extends CanvasState {
   addConnection: (connection: Omit<BookmarkConnection, 'id'>) => void;
   removeConnection: (id: string) => void;
   removeConnectionBetween: (sourceId: string, targetId: string) => void;
+  recalculateEdges: (nodeId: string) => void;
   setSelectedNodes: (nodeIds: string[]) => void;
   toggleGrid: () => void;
   clearCanvas: () => void;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const calculateConnectionHandles = (sourceNode: BookmarkNode, targetNode: BookmarkNode) => {
+  const sourceCenter = {
+    x: sourceNode.position.x + 175, // Half of node width (350)
+    y: sourceNode.position.y + 125  // Half of node height (250)
+  };
+  
+  const targetCenter = {
+    x: targetNode.position.x + 175,
+    y: targetNode.position.y + 125
+  };
+  
+  // Determine connection points based on relative positions
+  let sourceHandle = '';
+  let targetHandle = '';
+  
+  const dx = targetCenter.x - sourceCenter.x;
+  const dy = targetCenter.y - sourceCenter.y;
+  
+  if (Math.abs(dx) > Math.abs(dy)) {
+    // Horizontal connection is stronger
+    if (dx > 0) {
+      sourceHandle = 'right';
+      targetHandle = 'left';
+    } else {
+      sourceHandle = 'left';
+      targetHandle = 'right';
+    }
+  } else {
+    // Vertical connection is stronger
+    if (dy > 0) {
+      sourceHandle = 'bottom';
+      targetHandle = 'top';
+    } else {
+      sourceHandle = 'top';
+      targetHandle = 'bottom';
+    }
+  }
+  
+  return { sourceHandle, targetHandle };
+};
 
 export const useCanvasStore = create<CanvasStore>()(
   subscribeWithSelector((set, get) => ({
@@ -83,10 +127,21 @@ export const useCanvasStore = create<CanvasStore>()(
     },
 
     addConnection: (connection) => {
+      const state = get();
+      const sourceNode = state.nodes.find(n => n.id === connection.source);
+      const targetNode = state.nodes.find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) return;
+      
+      const { sourceHandle, targetHandle } = calculateConnectionHandles(sourceNode, targetNode);
+      
       const newEdge: BookmarkConnection = {
         ...connection,
         id: generateId(),
+        sourceHandle,
+        targetHandle,
       };
+      
       set((state) => ({
         edges: [...state.edges, newEdge],
       }));
@@ -105,6 +160,34 @@ export const useCanvasStore = create<CanvasStore>()(
             (edge.source === targetId && edge.target === sourceId))
         ),
       }));
+    },
+
+    recalculateEdges: (nodeId) => {
+      const state = get();
+      const affectedEdges = state.edges.filter(edge => 
+        edge.source === nodeId || edge.target === nodeId
+      );
+      
+      if (affectedEdges.length === 0) return;
+      
+      const updatedEdges = state.edges.map(edge => {
+        if (edge.source === nodeId || edge.target === nodeId) {
+          const sourceNode = state.nodes.find(n => n.id === edge.source);
+          const targetNode = state.nodes.find(n => n.id === edge.target);
+          
+          if (sourceNode && targetNode) {
+            const { sourceHandle, targetHandle } = calculateConnectionHandles(sourceNode, targetNode);
+            return {
+              ...edge,
+              sourceHandle,
+              targetHandle,
+            };
+          }
+        }
+        return edge;
+      });
+      
+      set({ edges: updatedEdges });
     },
 
     setSelectedNodes: (nodeIds) => {

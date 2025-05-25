@@ -8,6 +8,8 @@ import ReactFlow, {
   getConnectedEdges,
   getIncomers,
   getOutgoers,
+  ReactFlowProvider,
+  useReactFlow,
 } from 'reactflow';
 import type { Connection, Edge, Node } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -19,7 +21,7 @@ const nodeTypes = {
   bookmark: BookmarkNode,
 };
 
-export const Canvas = () => {
+const CanvasInner = () => {
   const {
     nodes,
     edges,
@@ -27,11 +29,19 @@ export const Canvas = () => {
     addConnection,
     removeConnectionBetween,
     updateBookmark,
+    recalculateEdges,
   } = useCanvasStore();
+
+  const { screenToFlowPosition } = useReactFlow();
 
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
+  
+  // Use refs for selection box to avoid re-renders
+  const selectionBoxRef = useRef<HTMLDivElement>(null);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
   
   // Use refs for connection line to avoid re-renders
   const connectionLineRef = useRef<SVGLineElement>(null);
@@ -56,8 +66,9 @@ export const Canvas = () => {
   const onNodeDragStop = useCallback(
     (_event: any, node: Node) => {
       updateBookmark(node.id, { position: node.position });
+      recalculateEdges(node.id);
     },
-    [updateBookmark]
+    [updateBookmark, recalculateEdges]
   );
 
   const onNodesChange = useCallback((changes: any) => {
@@ -136,7 +147,28 @@ export const Canvas = () => {
       connectionLineRef.current.setAttribute('x2', String(e.clientX));
       connectionLineRef.current.setAttribute('y2', String(e.clientY));
     }
-  }, [connectingFrom, isDragging]);
+    
+    if (isSelecting && selectionStartRef.current && selectionBoxRef.current) {
+      // Directly update selection box DOM - no state updates, no re-renders
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+      
+      const startX = selectionStartRef.current.x;
+      const startY = selectionStartRef.current.y;
+      
+      const left = Math.min(startX, endX);
+      const top = Math.min(startY, endY);
+      const width = Math.abs(endX - startX);
+      const height = Math.abs(endY - startY);
+      
+      selectionBoxRef.current.style.left = `${left}px`;
+      selectionBoxRef.current.style.top = `${top}px`;
+      selectionBoxRef.current.style.width = `${width}px`;
+      selectionBoxRef.current.style.height = `${height}px`;
+      selectionBoxRef.current.style.display = 'block';
+    }
+  }, [connectingFrom, isDragging, isSelecting]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (connectingFrom && isDragging) {
@@ -170,15 +202,107 @@ export const Canvas = () => {
       }
     }
     
+    if (isSelecting && selectionStartRef.current && selectionBoxRef.current) {
+      // Finish selection - find nodes within selection box
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+      
+      const startX = selectionStartRef.current.x;
+      const startY = selectionStartRef.current.y;
+      
+      const minX = Math.min(startX, endX);
+      const maxX = Math.max(startX, endX);
+      const minY = Math.min(startY, endY);
+      const maxY = Math.max(startY, endY);
+      
+      // Only select if the selection box has some size
+      if (Math.abs(endX - startX) > 5 && Math.abs(endY - startY) > 5) {
+        console.log('Selection box coordinates (DOM):', { minX, maxX, minY, maxY });
+        
+        // Convert DOM coordinates to React Flow coordinates
+        const topLeft = screenToFlowPosition({ x: minX, y: minY });
+        const bottomRight = screenToFlowPosition({ x: maxX, y: maxY });
+        
+        const flowMinX = topLeft.x;
+        const flowMinY = topLeft.y;
+        const flowMaxX = bottomRight.x;
+        const flowMaxY = bottomRight.y;
+        
+        console.log('Selection box coordinates (Flow):', { 
+          flowMinX, flowMaxX, flowMinY, flowMaxY 
+        });
+        
+        const nodesInSelection = nodes.filter(node => {
+          const nodeX = node.position.x;
+          const nodeY = node.position.y;
+          const nodeWidth = 350; // Default node width
+          const nodeHeight = 250; // Default node height
+          
+          console.log(`Node ${node.id} at (${nodeX}, ${nodeY}) to (${nodeX + nodeWidth}, ${nodeY + nodeHeight})`);
+          
+          // Check if any part of the node intersects with selection box in Flow coordinates
+          const nodeRight = nodeX + nodeWidth;
+          const nodeBottom = nodeY + nodeHeight;
+          
+          const overlaps = !(nodeRight < flowMinX || nodeX > flowMaxX || 
+                           nodeBottom < flowMinY || nodeY > flowMaxY);
+          
+          console.log(`Node ${node.id} overlaps:`, overlaps);
+          return overlaps;
+        });
+        
+        const selectedNodeIds = nodesInSelection.map(node => node.id);
+        setSelectedNodes(selectedNodeIds);
+        
+        console.log('Selected nodes:', selectedNodeIds.length, selectedNodeIds);
+      } else {
+        console.log('Selection box too small:', Math.abs(endX - startX), Math.abs(endY - startY));
+      }
+      
+      // Hide selection box
+      selectionBoxRef.current.style.display = 'none';
+    }
+    
+    // Reset states
     setConnectingFrom(null);
     setIsDragging(false);
+    setIsSelecting(false);
     connectionStartRef.current = null;
+    selectionStartRef.current = null;
     
     // Hide the connection line
     if (connectionLineRef.current) {
       connectionLineRef.current.style.display = 'none';
     }
-  }, [connectingFrom, isDragging, edges, addConnection, removeConnectionBetween]);
+  }, [connectingFrom, isDragging, isSelecting, edges, addConnection, removeConnectionBetween, nodes]);
+
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    // Check if right-clicking on empty canvas (not on a node)
+    if (e.button === 2) {
+      const target = e.target as HTMLElement;
+      const isOnNode = target.closest('.bookmark-node');
+      
+      if (!isOnNode) {
+        // Start selection box
+        setIsSelecting(true);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
+        
+        selectionStartRef.current = { x: startX, y: startY };
+        
+        // Initialize selection box
+        if (selectionBoxRef.current) {
+          selectionBoxRef.current.style.left = `${startX}px`;
+          selectionBoxRef.current.style.top = `${startY}px`;
+          selectionBoxRef.current.style.width = '0px';
+          selectionBoxRef.current.style.height = '0px';
+          selectionBoxRef.current.style.display = 'block';
+        }
+      }
+    }
+  }, []);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // Close any open context menus when clicking on canvas
@@ -187,11 +311,13 @@ export const Canvas = () => {
   }, []);
 
 
+
   return (
     <div 
       className="canvas-container"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onMouseDown={handleCanvasMouseDown}
       onClick={handleCanvasClick}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -204,6 +330,9 @@ export const Canvas = () => {
         onNodeDragStop={onNodeDragStop}
         onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
+        multiSelectionKeyCode={null} // Allow multi-selection without key
+        selectionKeyCode={null} // Allow selection without key
+        deleteKeyCode={null} // Disable delete key
         fitView
         attributionPosition="top-right"
       >
@@ -216,6 +345,19 @@ export const Canvas = () => {
         <Controls />
         <MiniMap />
       </ReactFlow>
+
+      {/* Selection box */}
+      <div 
+        ref={selectionBoxRef}
+        style={{
+          position: 'absolute',
+          border: '1px dashed #0078d4',
+          backgroundColor: 'rgba(0, 120, 212, 0.1)',
+          pointerEvents: 'none',
+          zIndex: 500,
+          display: 'none',
+        }}
+      />
 
       {/* Connection line preview - rendered as portal to avoid React Flow transforms */}
       {createPortal(
@@ -247,3 +389,12 @@ export const Canvas = () => {
     </div>
   );
 };
+
+export const Canvas = () => {
+  return (
+    <ReactFlowProvider>
+      <CanvasInner />
+    </ReactFlowProvider>
+  );
+};
+

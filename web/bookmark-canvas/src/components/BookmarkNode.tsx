@@ -134,14 +134,54 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
       >
         {/* Connection handles - hidden but functional */}
         <Handle
-          type="target"
+          id="left"
+          type="source"
           position={Position.Left}
-          style={{ opacity: 0 }}
+          style={{ opacity: 0, left: -1 }}
         />
         <Handle
+          id="right"
           type="source"
           position={Position.Right}
-          style={{ opacity: 0 }}
+          style={{ opacity: 0, right: -1 }}
+        />
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          style={{ opacity: 0, top: -1 }}
+        />
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          style={{ opacity: 0, bottom: -1 }}
+        />
+        
+        {/* Target handles */}
+        <Handle
+          id="left"
+          type="target"
+          position={Position.Left}
+          style={{ opacity: 0, left: -1 }}
+        />
+        <Handle
+          id="right"
+          type="target"
+          position={Position.Right}
+          style={{ opacity: 0, right: -1 }}
+        />
+        <Handle
+          id="top"
+          type="target"
+          position={Position.Top}
+          style={{ opacity: 0, top: -1 }}
+        />
+        <Handle
+          id="bottom"
+          type="target"
+          position={Position.Bottom}
+          style={{ opacity: 0, bottom: -1 }}
         />
         
         {/* Header */}
