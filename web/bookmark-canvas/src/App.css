@@ -18,11 +18,13 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   min-width: 300px;
+  user-select: none;
+  position: relative;
 }
 
 .bookmark-node.selected {
-  border-color: #0078d4;
-  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+  border-color: #0078d4 !important;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3) !important;
 }
 
 .bookmark-header {
@@ -48,6 +50,50 @@
 
 .bookmark-content {
   background: #1e1e1e;
+  display: flex;
+  flex-direction: column;
+}
+
+.bookmark-content .monaco-editor,
+.bookmark-content .monaco-editor *,
+.bookmark-content .monaco-editor .view-lines,
+.bookmark-content .monaco-editor .view-line,
+.bookmark-content .monaco-editor .mtk1,
+.bookmark-content .monaco-editor .monaco-editor-background,
+.bookmark-content .monaco-editor .lines-content {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  pointer-events: none !important;
+}
+
+.bookmark-content .monaco-editor .monaco-scrollable-element {
+  pointer-events: auto !important;
+}
+
+/* Code Display (Prism) Styles */
+.code-display-container,
+.code-display-container *,
+.code-display-container pre,
+.code-display-container code {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+.code-display-container pre {
+  background: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  border: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.code-display-container code {
+  background: transparent !important;
+  color: inherit !important;
 }
 
 /* React Flow customizations */
@@ -79,4 +125,74 @@
 .react-flow__edge-path {
   stroke: #666 !important;
   stroke-width: 2 !important;
+}
+
+/* Resize handle specific styles */
+.resize-handle-corner {
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
+.resize-handle-corner:hover {
+  background: #3a3a3a !important;
+}
+
+/* Prevent React Flow from dragging this element */
+.nodrag {
+  pointer-events: auto !important;
+}
+
+/* Context Menu Styles */
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.context-menu {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
+  min-width: 160px;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #e1e1e1;
+  font-size: 0.9rem;
+  transition: background-color 0.1s;
+}
+
+.context-menu-item:hover {
+  background: #404040;
+}
+
+.context-menu-item.danger {
+  color: #ff6b6b;
+}
+
+.context-menu-item.danger:hover {
+  background: #4a2626;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: #404040;
+  margin: 4px 0;
+}
+
+/* Resize handle styles */
+.react-rnd-resize-handle {
+  background: rgba(0, 120, 212, 0.3) !important;
+  border: 1px solid #0078d4 !important;
+}
+
+.react-rnd-resize-handle:hover {
+  background: rgba(0, 120, 212, 0.6) !important;
 }

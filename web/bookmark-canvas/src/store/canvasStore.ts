@@ -39,6 +39,7 @@ interface CanvasStore extends CanvasState {
   removeBookmark: (id: string) => void;
   addConnection: (connection: Omit<BookmarkConnection, 'id'>) => void;
   removeConnection: (id: string) => void;
+  removeConnectionBetween: (sourceId: string, targetId: string) => void;
   setSelectedNodes: (nodeIds: string[]) => void;
   toggleGrid: () => void;
   clearCanvas: () => void;
@@ -94,6 +95,15 @@ export const useCanvasStore = create<CanvasStore>()(
     removeConnection: (id) => {
       set((state) => ({
         edges: state.edges.filter((edge) => edge.id !== id),
+      }));
+    },
+
+    removeConnectionBetween: (sourceId, targetId) => {
+      set((state) => ({
+        edges: state.edges.filter((edge) => 
+          !((edge.source === sourceId && edge.target === targetId) ||
+            (edge.source === targetId && edge.target === sourceId))
+        ),
       }));
     },
 
