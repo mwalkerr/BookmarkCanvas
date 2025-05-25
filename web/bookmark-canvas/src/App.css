@@ -1,0 +1,82 @@
+.app {
+  height: 100vh;
+  width: 100vw;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.canvas-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Bookmark Node Styles */
+.bookmark-node {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 300px;
+}
+
+.bookmark-node.selected {
+  border-color: #0078d4;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+}
+
+.bookmark-header {
+  padding: 0.75rem 1rem;
+  background: #1a1a1a;
+  border-bottom: 1px solid #404040;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bookmark-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #e1e1e1;
+}
+
+.bookmark-path {
+  font-size: 0.75rem;
+  color: #888;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.bookmark-content {
+  background: #1e1e1e;
+}
+
+/* React Flow customizations */
+.react-flow__attribution {
+  background: rgba(42, 42, 42, 0.8) !important;
+  color: #888 !important;
+}
+
+.react-flow__controls {
+  background: #2a2a2a !important;
+  border: 1px solid #404040 !important;
+}
+
+.react-flow__controls button {
+  background: #2a2a2a !important;
+  color: #e1e1e1 !important;
+  border-bottom: 1px solid #404040 !important;
+}
+
+.react-flow__controls button:hover {
+  background: #404040 !important;
+}
+
+.react-flow__minimap {
+  background: #1a1a1a !important;
+  border: 1px solid #404040 !important;
+}
+
+.react-flow__edge-path {
+  stroke: #666 !important;
+  stroke-width: 2 !important;
+}
