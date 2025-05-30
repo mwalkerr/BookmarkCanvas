@@ -50,8 +50,8 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
 //        LOG.info("JBCefApp.isSupported()?: ${JBCefApp.isSupported()}")
         browser = JBCefBrowser()
         // give the browser an obvious border and background to make sure it's rendering properly
-        browser.component.border = javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        browser.component.background = java.awt.Color.BLUE
+//        browser.component.border = javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)
+//        browser.component.background = java.awt.Color.BLUE
 
         // Set up JS queries for communication
         addBookmarkQuery = setupAddBookmarkQuery()
@@ -107,65 +107,28 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
     
     private fun loadCanvasHtmlFromResources(): String? {
         return try {
-            // First try to load from resources
-            val htmlStream = this::class.java.getResourceAsStream("/web/canvas.html")
+            // Try to load the React app HTML
+            val htmlStream = this::class.java.getResourceAsStream("/web/react-canvas.html")
             if (htmlStream != null) {
                 val htmlContent = htmlStream.bufferedReader().use { it.readText() }
                 
-                // Also load CSS and JS content and embed them inline
-                val cssContent = this::class.java.getResourceAsStream("/web/canvas.css")?.bufferedReader()?.use { it.readText() }
-                val jsContent = this::class.java.getResourceAsStream("/web/canvas.js")?.bufferedReader()?.use { it.readText() }
-                
-                // Replace external references with inline content
-                var modifiedHtml = htmlContent
-                if (cssContent != null) {
-                    modifiedHtml = modifiedHtml.replace(
-                        """<link rel="stylesheet" href="canvas.css">""",
-                        "<style>\n$cssContent\n</style>"
-                    )
-                }
-                if (jsContent != null) {
-                    modifiedHtml = modifiedHtml.replace(
-                        """<script src="canvas.js"></script>""",
-                        "<script>\n$jsContent\n</script>"
-                    )
-                }
-                
-                LOG.info("Successfully loaded and processed canvas HTML from resources")
-                modifiedHtml
+                // The React app is already self-contained, no need to inline anything
+                LOG.info("Successfully loaded React canvas HTML from resources")
+                htmlContent
             } else {
                 // Try loading from file system for development
-                val resourcesPath = Paths.get("src/main/resources/web/canvas.html")
+                val resourcesPath = Paths.get("src/main/resources/web/react-canvas.html")
                 if (resourcesPath.toFile().exists()) {
                     val htmlContent = resourcesPath.toFile().readText()
-                    val cssPath = Paths.get("src/main/resources/web/canvas.css")
-                    val jsPath = Paths.get("src/main/resources/web/canvas.js")
-                    
-                    var modifiedHtml = htmlContent
-                    if (cssPath.toFile().exists()) {
-                        val cssContent = cssPath.toFile().readText()
-                        modifiedHtml = modifiedHtml.replace(
-                            """<link rel="stylesheet" href="canvas.css">""",
-                            "<style>\n$cssContent\n</style>"
-                        )
-                    }
-                    if (jsPath.toFile().exists()) {
-                        val jsContent = jsPath.toFile().readText()
-                        modifiedHtml = modifiedHtml.replace(
-                            """<script src="canvas.js"></script>""",
-                            "<script>\n$jsContent\n</script>"
-                        )
-                    }
-                    
-                    LOG.info("Successfully loaded and processed canvas HTML from file system")
-                    modifiedHtml
+                    LOG.info("Successfully loaded React canvas HTML from file system")
+                    htmlContent
                 } else {
-                    LOG.error("Could not find canvas.html in resources or file system")
+                    LOG.error("Could not find react-canvas.html in resources or file system")
                     null
                 }
             }
         } catch (e: Exception) {
-            LOG.error("Error reading canvas HTML", e)
+            LOG.error("Error reading React canvas HTML", e)
             null
         }
     }

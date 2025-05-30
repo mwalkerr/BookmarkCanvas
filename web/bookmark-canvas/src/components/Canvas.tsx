@@ -31,6 +31,7 @@ const CanvasInner = () => {
   const { screenToFlowPosition } = useReactFlow();
 
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+  
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
