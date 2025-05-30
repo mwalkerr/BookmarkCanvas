@@ -1,17 +1,13 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  addEdge,
-  getConnectedEdges,
-  getIncomers,
-  getOutgoers,
   ReactFlowProvider,
   useReactFlow,
 } from 'reactflow';
-import type { Connection, Edge, Node } from 'reactflow';
+import type { Connection, Node } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 import { BookmarkNode } from './BookmarkNode';
@@ -72,10 +68,16 @@ const CanvasInner = () => {
   );
 
   const onNodesChange = useCallback((changes: any) => {
+    const movedNodes = new Set<string>();
+    
     // Handle position changes during drag for visual feedback
     changes.forEach((change: any) => {
       if (change.type === 'position' && change.dragging) {
         updateBookmark(change.id, { position: change.position });
+      }
+      if (change.type === 'position' && !change.dragging) {
+        // Node drag finished - track it for edge recalculation
+        movedNodes.add(change.id);
       }
       if (change.type === 'select') {
         if (change.selected) {
@@ -85,7 +87,12 @@ const CanvasInner = () => {
         }
       }
     });
-  }, [updateBookmark]);
+    
+    // Recalculate edges for all moved nodes
+    movedNodes.forEach(nodeId => {
+      recalculateEdges(nodeId);
+    });
+  }, [updateBookmark, recalculateEdges]);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node[] }) => {
     setSelectedNodes(selectedNodes.map(node => node.id));
@@ -304,7 +311,7 @@ const CanvasInner = () => {
     }
   }, []);
 
-  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+  const handleCanvasClick = useCallback(() => {
     // Close any open context menus when clicking on canvas
     const event = new CustomEvent('closeContextMenus');
     document.dispatchEvent(event);
@@ -337,7 +344,6 @@ const CanvasInner = () => {
         attributionPosition="top-right"
       >
         <Background
-          variant="dots"
           gap={20}
           size={1}
           style={{ opacity: isGridVisible ? 0.5 : 0 }}

@@ -4,7 +4,7 @@ import { useCanvasStore } from './store/canvasStore';
 import './App.css';
 
 function App() {
-  const { addBookmark, toggleGrid, isGridVisible, clearCanvas } = useCanvasStore();
+  const { addBookmark, clearCanvas } = useCanvasStore();
 
   // Add sample bookmarks for testing
   useEffect(() => {

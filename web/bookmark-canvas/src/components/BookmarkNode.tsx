@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Handle, Position } from 'reactflow';
 import { Editor } from '@monaco-editor/react';
 import { CodeDisplay } from './CodeDisplay';
-import { Rnd } from 'react-rnd';
+// import { Rnd } from 'react-rnd';
 import type { NodeProps } from 'reactflow';
 
 type BookmarkData = {
@@ -22,10 +22,10 @@ interface BookmarkNodeProps extends NodeProps {
 
 export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-  const [useCodeDisplay, setUseCodeDisplay] = useState(true); // Use Prism instead of Monaco for now
+  const [useCodeDisplay] = useState(true); // Use Prism instead of Monaco for now
   const [size, setSize] = useState({ width: 350, height: 250 });
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  // const [isResizing, setIsResizing] = useState(false);
+  // const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [rightClickStart, setRightClickStart] = useState<{ x: number; y: number } | null>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -85,7 +85,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsResizing(true);
+    // setIsResizing(true);
     
     const startData = {
       x: e.clientX,
@@ -94,7 +94,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
       height: size.height,
     };
     
-    setResizeStart(startData);
+    // setResizeStart(startData);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       moveEvent.preventDefault();
@@ -112,7 +112,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
     const handleMouseUp = (upEvent: MouseEvent) => {
       upEvent.preventDefault();
       upEvent.stopPropagation();
-      setIsResizing(false);
+      // setIsResizing(false);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -218,7 +218,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
                 wordWrap: 'on',
                 selectOnLineNumbers: false,
                 selectionHighlight: false,
-                occurrencesHighlight: false,
+                occurrencesHighlight: "off",
                 domReadOnly: true,
                 contextmenu: false,
                 scrollbar: {
