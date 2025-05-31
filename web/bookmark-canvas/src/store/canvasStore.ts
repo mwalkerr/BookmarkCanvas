@@ -50,15 +50,20 @@ interface CanvasStore extends CanvasState {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+// These defaults are used for calculating connection points.
+// If nodes have variable sizes stored, those should be used instead.
+const DEFAULT_NODE_WIDTH_FOR_HANDLES = 350;
+const DEFAULT_NODE_HEIGHT_FOR_HANDLES = 250;
+
 const calculateConnectionHandles = (sourceNode: BookmarkNode, targetNode: BookmarkNode) => {
   const sourceCenter = {
-    x: sourceNode.position.x + 175, // Half of node width (350)
-    y: sourceNode.position.y + 125  // Half of node height (250)
+    x: sourceNode.position.x + (sourceNode.width || DEFAULT_NODE_WIDTH_FOR_HANDLES) / 2,
+    y: sourceNode.position.y + (sourceNode.height || DEFAULT_NODE_HEIGHT_FOR_HANDLES) / 2
   };
   
   const targetCenter = {
-    x: targetNode.position.x + 175,
-    y: targetNode.position.y + 125
+    x: targetNode.position.x + (targetNode.width || DEFAULT_NODE_WIDTH_FOR_HANDLES) / 2,
+    y: targetNode.position.y + (targetNode.height || DEFAULT_NODE_HEIGHT_FOR_HANDLES) / 2
   };
   
   // Determine connection points based on relative positions

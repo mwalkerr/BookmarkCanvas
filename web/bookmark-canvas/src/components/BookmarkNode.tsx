@@ -6,6 +6,38 @@ import { CodeDisplay } from './CodeDisplay';
 // import { Rnd } from 'react-rnd';
 import type { NodeProps } from 'reactflow';
 
+const INITIAL_NODE_WIDTH = 350;
+const INITIAL_NODE_HEIGHT = 250;
+const MIN_NODE_WIDTH = 250;
+const MIN_NODE_HEIGHT = 150;
+
+const RIGHT_CLICK_BUTTON_CODE = 2;
+const CLICK_DRAG_THRESHOLD_PX = 5; // Pixels to differentiate click from drag
+
+const HANDLE_OPACITY = 0;
+const HANDLE_OFFSET = -1; // For positioning handles slightly outside the node
+
+const NODE_HEADER_HEIGHT = 60; // Includes title and path
+const NODE_CONTENT_PADDING = 2; // Padding around the content area (e.g., editor)
+
+const EDITOR_FONT_SIZE = 12;
+const EDITOR_MINIMAP_ENABLED = false;
+const EDITOR_SCROLL_BEYOND_LAST_LINE = false;
+const EDITOR_LINE_NUMBERS_ON = 'on';
+const EDITOR_FOLDING_ENABLED = false;
+const EDITOR_WORD_WRAP_ON = 'on';
+
+const RESIZE_HANDLE_SIZE = 16;
+const RESIZE_HANDLE_OFFSET = -1;
+const RESIZE_HANDLE_Z_INDEX = 1000;
+const RESIZE_HANDLE_BORDER_RADIUS = '8px'; // For the bottom-right corner
+const RESIZE_HANDLE_SVG_SIZE = 8;
+const RESIZE_HANDLE_SVG_STROKE_WIDTH = "1";
+const RESIZE_HANDLE_SVG_OPACITY = "0.8";
+
+const CONTEXT_MENU_OVERLAY_Z_INDEX = 999;
+const CONTEXT_MENU_Z_INDEX = 1000;
+
 type BookmarkData = {
   id: string;
   title: string;
@@ -23,7 +55,7 @@ interface BookmarkNodeProps extends NodeProps {
 export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [useCodeDisplay] = useState(true); // Use Prism instead of Monaco for now
-  const [size, setSize] = useState({ width: 350, height: 250 });
+  const [size, setSize] = useState({ width: INITIAL_NODE_WIDTH, height: INITIAL_NODE_HEIGHT });
   // const [isResizing, setIsResizing] = useState(false);
   // const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [rightClickStart, setRightClickStart] = useState<{ x: number; y: number } | null>(null);
@@ -34,7 +66,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 2) { // Right click
+    if (e.button === RIGHT_CLICK_BUTTON_CODE) { // Right click
       setRightClickStart({ x: e.clientX, y: e.clientY });
       if (data.onConnectionStart) {
         data.onConnectionStart(id, e);
@@ -43,13 +75,13 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
   }, [data, id]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (e.button === 2 && rightClickStart) { // Right click
+    if (e.button === RIGHT_CLICK_BUTTON_CODE && rightClickStart) { // Right click
       const distance = Math.sqrt(
         Math.pow(e.clientX - rightClickStart.x, 2) + 
         Math.pow(e.clientY - rightClickStart.y, 2)
       );
       
-      if (distance < 5) {
+      if (distance < CLICK_DRAG_THRESHOLD_PX) {
         // It was a click, not a drag - show context menu
         setContextMenu({ 
           x: e.clientX, 
@@ -103,8 +135,8 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
       const deltaX = moveEvent.clientX - startData.x;
       const deltaY = moveEvent.clientY - startData.y;
 
-      const newWidth = Math.max(250, startData.width + deltaX);
-      const newHeight = Math.max(150, startData.height + deltaY);
+      const newWidth = Math.max(MIN_NODE_WIDTH, startData.width + deltaX);
+      const newHeight = Math.max(MIN_NODE_HEIGHT, startData.height + deltaY);
 
       setSize({ width: newWidth, height: newHeight });
     };
@@ -137,25 +169,25 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
           id="left"
           type="source"
           position={Position.Left}
-          style={{ opacity: 0, left: -1 }}
+          style={{ opacity: HANDLE_OPACITY, left: HANDLE_OFFSET }}
         />
         <Handle
           id="right"
           type="source"
           position={Position.Right}
-          style={{ opacity: 0, right: -1 }}
+          style={{ opacity: HANDLE_OPACITY, right: HANDLE_OFFSET }}
         />
         <Handle
           id="top"
           type="source"
           position={Position.Top}
-          style={{ opacity: 0, top: -1 }}
+          style={{ opacity: HANDLE_OPACITY, top: HANDLE_OFFSET }}
         />
         <Handle
           id="bottom"
           type="source"
           position={Position.Bottom}
-          style={{ opacity: 0, bottom: -1 }}
+          style={{ opacity: HANDLE_OPACITY, bottom: HANDLE_OFFSET }}
         />
         
         {/* Target handles */}
@@ -163,25 +195,25 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
           id="left"
           type="target"
           position={Position.Left}
-          style={{ opacity: 0, left: -1 }}
+          style={{ opacity: HANDLE_OPACITY, left: HANDLE_OFFSET }}
         />
         <Handle
           id="right"
           type="target"
           position={Position.Right}
-          style={{ opacity: 0, right: -1 }}
+          style={{ opacity: HANDLE_OPACITY, right: HANDLE_OFFSET }}
         />
         <Handle
           id="top"
           type="target"
           position={Position.Top}
-          style={{ opacity: 0, top: -1 }}
+          style={{ opacity: HANDLE_OPACITY, top: HANDLE_OFFSET }}
         />
         <Handle
           id="bottom"
           type="target"
           position={Position.Bottom}
-          style={{ opacity: 0, bottom: -1 }}
+          style={{ opacity: HANDLE_OPACITY, bottom: HANDLE_OFFSET }}
         />
         
         {/* Header */}
@@ -193,29 +225,29 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
         </div>
         
         {/* Code content */}
-        <div className="bookmark-content" style={{ height: `${size.height - 60}px` }}>
+        <div className="bookmark-content" style={{ height: `${size.height - NODE_HEADER_HEIGHT}px` }}>
           {useCodeDisplay ? (
             <CodeDisplay 
               code={data.content}
               language={data.language}
-              width={`${size.width - 2}px`}
-              height={`${size.height - 60}px`}
+              width={`${size.width - NODE_CONTENT_PADDING}px`}
+              height={`${size.height - NODE_HEADER_HEIGHT}px`}
             />
           ) : (
             <Editor
-              height={`${size.height - 60}px`}
-              width={`${size.width - 2}px`}
+              height={`${size.height - NODE_HEADER_HEIGHT}px`}
+              width={`${size.width - NODE_CONTENT_PADDING}px`}
               language={data.language}
               value={data.content}
               theme="vs-dark"
               options={{
                 readOnly: true,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                fontSize: 12,
-                lineNumbers: 'on',
-                folding: false,
-                wordWrap: 'on',
+                minimap: { enabled: EDITOR_MINIMAP_ENABLED },
+                scrollBeyondLastLine: EDITOR_SCROLL_BEYOND_LAST_LINE,
+                fontSize: EDITOR_FONT_SIZE,
+                lineNumbers: EDITOR_LINE_NUMBERS_ON,
+                folding: EDITOR_FOLDING_ENABLED,
+                wordWrap: EDITOR_WORD_WRAP_ON,
                 selectOnLineNumbers: false,
                 selectionHighlight: false,
                 occurrencesHighlight: "off",
@@ -241,22 +273,22 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
           }}
           style={{
             position: 'absolute',
-            bottom: -1,
-            right: -1,
-            width: 16,
-            height: 16,
+            bottom: RESIZE_HANDLE_OFFSET,
+            right: RESIZE_HANDLE_OFFSET,
+            width: RESIZE_HANDLE_SIZE,
+            height: RESIZE_HANDLE_SIZE,
             cursor: 'se-resize',
-            zIndex: 1000, // Higher z-index
+            zIndex: RESIZE_HANDLE_Z_INDEX, // Higher z-index
             background: '#2a2a2a',
             border: '1px solid #404040',
-            borderRadius: '0 0 8px 0',
+            borderRadius: `0 0 ${RESIZE_HANDLE_BORDER_RADIUS} 0`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <svg width="8" height="8" viewBox="0 0 8 8" style={{ pointerEvents: 'none' }}>
-            <g stroke="#888" strokeWidth="1" opacity="0.8">
+          <svg width={RESIZE_HANDLE_SVG_SIZE} height={RESIZE_HANDLE_SVG_SIZE} viewBox="0 0 8 8" style={{ pointerEvents: 'none' }}>
+            <g stroke="#888" strokeWidth={RESIZE_HANDLE_SVG_STROKE_WIDTH} opacity={RESIZE_HANDLE_SVG_OPACITY}>
               <line x1="1" y1="7" x2="7" y2="1" />
               <line x1="3" y1="7" x2="7" y2="3" />
               <line x1="5" y1="7" x2="7" y2="5" />
@@ -277,7 +309,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 999,
+              zIndex: CONTEXT_MENU_OVERLAY_Z_INDEX,
             }}
           />
           <div 
@@ -286,7 +318,7 @@ export const BookmarkNode = memo(({ data, selected, id }: BookmarkNodeProps) => 
               position: 'fixed', 
               top: contextMenu.y, 
               left: contextMenu.x,
-              zIndex: 1000
+              zIndex: CONTEXT_MENU_Z_INDEX
             }}
           >
             <div className="context-menu-item" onClick={() => handleMenuAction('edit')}>

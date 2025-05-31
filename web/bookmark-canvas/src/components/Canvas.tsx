@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import {useCallback, useState, useRef, } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
   Background,
@@ -13,11 +13,31 @@ import 'reactflow/dist/style.css';
 import { BookmarkNode } from './BookmarkNode';
 import { useCanvasStore } from '../store/canvasStore';
 
+const NODE_TYPE_BOOKMARK = 'bookmark';
+const RIGHT_CLICK_BUTTON_CODE = 2;
+const MIN_SELECTION_BOX_SIZE_THRESHOLD = 5; // Minimum pixels to consider it a selection drag
+const DEFAULT_NODE_WIDTH = 350; // Default width for selection calculation
+const DEFAULT_NODE_HEIGHT = 250; // Default height for selection calculation
+
+const BACKGROUND_GAP = 20;
+const BACKGROUND_SIZE = 1;
+const BACKGROUND_OPACITY_VISIBLE = 0.5;
+const BACKGROUND_OPACITY_HIDDEN = 0;
+
+const SELECTION_BOX_BORDER_STYLE = '1px dashed #0078d4';
+const SELECTION_BOX_BACKGROUND_COLOR = 'rgba(0, 120, 212, 0.1)';
+const SELECTION_BOX_Z_INDEX = 500;
+
+const CONNECTION_LINE_Z_INDEX = 1000;
+const CONNECTION_LINE_COLOR = '#0078d4';
+const CONNECTION_LINE_STROKE_WIDTH = 2;
+const CONNECTION_LINE_DASHARRAY = '4 4';
+
 const nodeTypes = {
-  bookmark: BookmarkNode,
+  [NODE_TYPE_BOOKMARK]: BookmarkNode,
 };
 
-const CanvasInner = () => {
+const CanvasInner: React.FC = () => {
   const {
     nodes,
     edges,
@@ -43,8 +63,6 @@ const CanvasInner = () => {
   // Use refs for connection line to avoid re-renders
   const connectionLineRef = useRef<SVGLineElement>(null);
   const connectionStartRef = useRef<{ x: number; y: number } | null>(null);
-
-
 
 
   const onConnect = useCallback(
@@ -110,7 +128,7 @@ const CanvasInner = () => {
     data: {
       ...node.data,
       onConnectionStart: (nodeId: string, event: React.MouseEvent) => {
-        if (event.button === 2) { // Right click
+        if (event.button === RIGHT_CLICK_BUTTON_CODE) { // Right click
           event.preventDefault();
           event.stopPropagation();
           setConnectingFrom(nodeId);
@@ -225,7 +243,7 @@ const CanvasInner = () => {
       const maxY = Math.max(startY, endY);
       
       // Only select if the selection box has some size
-      if (Math.abs(endX - startX) > 5 && Math.abs(endY - startY) > 5) {
+      if (Math.abs(endX - startX) > MIN_SELECTION_BOX_SIZE_THRESHOLD && Math.abs(endY - startY) > MIN_SELECTION_BOX_SIZE_THRESHOLD) {
         console.log('Selection box coordinates (DOM):', { minX, maxX, minY, maxY });
         
         // Convert DOM coordinates to React Flow coordinates
@@ -244,8 +262,8 @@ const CanvasInner = () => {
         const nodesInSelection = nodes.filter(node => {
           const nodeX = node.position.x;
           const nodeY = node.position.y;
-          const nodeWidth = 350; // Default node width
-          const nodeHeight = 250; // Default node height
+          const nodeWidth = node.width || DEFAULT_NODE_WIDTH; 
+          const nodeHeight = node.height || DEFAULT_NODE_HEIGHT;
           
           console.log(`Node ${node.id} at (${nodeX}, ${nodeY}) to (${nodeX + nodeWidth}, ${nodeY + nodeHeight})`);
           
@@ -287,7 +305,7 @@ const CanvasInner = () => {
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     // Check if right-clicking on empty canvas (not on a node)
-    if (e.button === 2) {
+    if (e.button === RIGHT_CLICK_BUTTON_CODE) {
       const target = e.target as HTMLElement;
       const isOnNode = target.closest('.bookmark-node');
       
@@ -318,8 +336,6 @@ const CanvasInner = () => {
     document.dispatchEvent(event);
   }, []);
 
-
-
   return (
     <div 
       className="canvas-container"
@@ -342,12 +358,13 @@ const CanvasInner = () => {
         selectionKeyCode={null} // Allow selection without key
         deleteKeyCode={null} // Disable delete key
         fitView
-        attributionPosition="top-right"
+        // attributionPosition="top-right"
+          proOptions={{hideAttribution: true}}
       >
         <Background
-          gap={20}
-          size={1}
-          style={{ opacity: isGridVisible ? 0.5 : 0 }}
+          gap={BACKGROUND_GAP}
+          size={BACKGROUND_SIZE}
+          style={{ opacity: isGridVisible ? BACKGROUND_OPACITY_VISIBLE : BACKGROUND_OPACITY_HIDDEN }}
         />
         <Controls />
         <MiniMap />
@@ -358,10 +375,10 @@ const CanvasInner = () => {
         ref={selectionBoxRef}
         style={{
           position: 'absolute',
-          border: '1px dashed #0078d4',
-          backgroundColor: 'rgba(0, 120, 212, 0.1)',
+          border: SELECTION_BOX_BORDER_STYLE,
+          backgroundColor: SELECTION_BOX_BACKGROUND_COLOR,
           pointerEvents: 'none',
-          zIndex: 500,
+          zIndex: SELECTION_BOX_Z_INDEX,
           display: 'none',
         }}
       />
@@ -376,7 +393,7 @@ const CanvasInner = () => {
             width: '100vw',
             height: '100vh',
             pointerEvents: 'none',
-            zIndex: 1000,
+            zIndex: CONNECTION_LINE_Z_INDEX,
           }}
         >
           <line
@@ -385,9 +402,9 @@ const CanvasInner = () => {
             y1={0}
             x2={0}
             y2={0}
-            stroke="#0078d4"
-            strokeWidth={2}
-            strokeDasharray="4 4"
+            stroke={CONNECTION_LINE_COLOR}
+            strokeWidth={CONNECTION_LINE_STROKE_WIDTH}
+            strokeDasharray={CONNECTION_LINE_DASHARRAY}
             style={{ display: 'none' }}
           />
         </svg>,
@@ -404,4 +421,3 @@ export const Canvas = () => {
     </ReactFlowProvider>
   );
 };
-

@@ -1,7 +1,12 @@
 package org.mwalker.bookmarkcanvas.ui
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
+import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -11,13 +16,10 @@ import org.mwalker.bookmarkcanvas.model.NodeConnection
 import org.mwalker.bookmarkcanvas.services.CanvasPersistenceService
 import java.awt.BorderLayout
 import java.awt.Point
-import java.io.File
 import java.nio.file.Paths
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.intellij.ui.jcef.*
+
 
 /**
  * Web-based canvas panel using JCEF WebView
@@ -45,15 +47,9 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
     companion object {
         private val LOG = Logger.getInstance(WebCanvasPanel::class.java)
     }
-
     init {
-//        LOG.info("JBCefApp.isSupported()?: ${JBCefApp.isSupported()}")
+        System.setProperty("ide.browser.jcef.extra.args", "--disable-frame-rate-limit")
         browser = JBCefBrowser()
-        // give the browser an obvious border and background to make sure it's rendering properly
-//        browser.component.border = javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)
-//        browser.component.background = java.awt.Color.BLUE
-
-        // Set up JS queries for communication
         addBookmarkQuery = setupAddBookmarkQuery()
         clearCanvasQuery = setupClearCanvasQuery()
         refreshBookmarksQuery = setupRefreshBookmarksQuery()
@@ -68,22 +64,23 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
         undoQuery = setupUndoQuery()
         redoQuery = setupRedoQuery()
         
-        // Set up load handler to inject bridge functions
+//         Set up load handler to inject bridge functions
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
+                LOG.info("WebCanvasPanel: onLoadEnd called, frame: ${frame?.isMain}, httpStatusCode: $httpStatusCode")
                 if (frame?.isMain == true) {
                     setupJavaScriptBridge()
                     loadCanvasState()
                 }
             }
         }, browser.cefBrowser)
-        
+
         // Load the HTML file
         loadCanvasHtml()
         
         add(browser.component, BorderLayout.CENTER)
     }
-    
+
     private fun loadCanvasHtml() {
         try {
             LOG.info("Loading canvas HTML file")
@@ -92,6 +89,10 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
             val canvasHtml = loadCanvasHtmlFromResources()
             if (canvasHtml != null) {
                 browser.loadHTML(canvasHtml)
+//                browser.loadURL("chrome://gpu")
+//                browser.loadURL("https://reactflow.dev/examples/overview")
+//                browser.loadURL("https://observablehq.com/@d3/zoom-to-bounding-box")
+//                browser.loadURL("https://carvisualizer.plus360degrees.com/threejs/")
                 LOG.info("Canvas HTML loaded via loadHTML")
             } else {
                 LOG.error("Could not load canvas HTML from resources")
@@ -108,7 +109,9 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
     private fun loadCanvasHtmlFromResources(): String? {
         return try {
             // Try to load the React app HTML
+//            val htmlStream = this::class.java.getResourceAsStream("/web/react-canvas2.html")
             val htmlStream = this::class.java.getResourceAsStream("/web/react-canvas.html")
+//            val htmlStream = this::class.java.getResourceAsStream("/web/debug.html")
             if (htmlStream != null) {
                 val htmlContent = htmlStream.bufferedReader().use { it.readText() }
                 
@@ -225,7 +228,7 @@ class WebCanvasPanel(val project: Project) : JPanel(BorderLayout()), CanvasInter
         
         browser.cefBrowser.executeJavaScript(bridgeScript, "", 0)
     }
-
+    
     private fun setupAddBookmarkQuery(): JBCefJSQuery {
         return JBCefJSQuery.create(browser as JBCefBrowserBase).also { query ->
             query.addHandler { request ->

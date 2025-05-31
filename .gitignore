@@ -42,3 +42,5 @@ bin/
 .DS_Store
 src/main/resources/web/react-canvas.html
 src/main/resources/web/vite.svg
+runide.pid
+runIde.log

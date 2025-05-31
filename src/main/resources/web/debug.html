@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CEF Debug Information</title>
+  <style>
+    body {
+      font-family: monospace;
+      margin: 0;
+      padding: 20px;
+      background: #f0f0f0;
+      line-height: 1.4;
+    }
+
+    .debug-section {
+      background: white;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 4px solid #007acc;
+    }
+
+    .debug-section h3 {
+      margin-top: 0;
+      color: #007acc;
+    }
+
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      padding: 3px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .debug-label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .debug-value {
+      color: #666;
+      font-family: monospace;
+    }
+
+    .scroll-events {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #f8f8f8;
+      padding: 10px;
+      border: 1px solid #ddd;
+      font-size: 12px;
+    }
+
+    .test-elements {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-box {
+      width: 100px;
+      height: 100px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .scale-test { background: #ff6b6b; }
+    .gpu-test { background: #4ecdc4; }
+    .scroll-test { background: #45b7d1; }
+
+    .live-info {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+<div class="live-info" id="liveInfo">
+  <div>Scroll Events: <span id="scrollCount">0</span></div>
+  <div>Wheel Events: <span id="wheelCount">0</span></div>
+  <div>Mouse Position: <span id="mousePos">0, 0</span></div>
+</div>
+
+<h1>🔍 CEF Browser Debug Information</h1>
+
+<div class="debug-section">
+  <h3>Browser Identity</h3>
+  <div class="debug-row">
+    <span class="debug-label">User Agent:</span>
+    <span class="debug-value" id="userAgent"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Vendor:</span>
+    <span class="debug-value" id="vendor"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">App Name:</span>
+    <span class="debug-value" id="appName"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">App Version:</span>
+    <span class="debug-value" id="appVersion"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Platform:</span>
+    <span class="debug-value" id="platform"></span>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>Display & Scaling</h3>
+  <div class="debug-row">
+    <span class="debug-label">Device Pixel Ratio:</span>
+    <span class="debug-value" id="devicePixelRatio"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Screen Size:</span>
+    <span class="debug-value" id="screenSize"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Available Screen:</span>
+    <span class="debug-value" id="availableScreen"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Window Size:</span>
+    <span class="debug-value" id="windowSize"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Viewport Size:</span>
+    <span class="debug-value" id="viewportSize"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Color Depth:</span>
+    <span class="debug-value" id="colorDepth"></span>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>Hardware & GPU</h3>
+  <div class="debug-row">
+    <span class="debug-label">WebGL Vendor:</span>
+    <span class="debug-value" id="webglVendor"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">WebGL Renderer:</span>
+    <span class="debug-value" id="webglRenderer"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Hardware Concurrency:</span>
+    <span class="debug-value" id="hardwareConcurrency"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Memory (approx):</span>
+    <span class="debug-value" id="memory"></span>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>Scroll Capabilities</h3>
+  <div class="debug-row">
+    <span class="debug-label">Smooth Scroll Support:</span>
+    <span class="debug-value" id="smoothScroll"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Touch Support:</span>
+    <span class="debug-value" id="touchSupport"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Pointer Events:</span>
+    <span class="debug-value" id="pointerEvents"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">Wheel Event Support:</span>
+    <span class="debug-value" id="wheelSupport"></span>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>CSS & Rendering Features</h3>
+  <div class="debug-row">
+    <span class="debug-label">CSS.supports transform3d:</span>
+    <span class="debug-value" id="transform3d"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">CSS.supports scroll-behavior:</span>
+    <span class="debug-value" id="scrollBehavior"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">CSS.supports overflow-scrolling:</span>
+    <span class="debug-value" id="overflowScrolling"></span>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>Test Elements</h3>
+  <p>These elements help visually test scaling and rendering:</p>
+  <div class="test-elements">
+    <div class="test-box scale-test">SCALE<br>TEST</div>
+    <div class="test-box gpu-test">GPU<br>TEST</div>
+    <div class="test-box scroll-test">SCROLL<br>TEST</div>
+  </div>
+</div>
+
+<div class="debug-section">
+  <h3>Live Scroll Events</h3>
+  <p>Scroll on this page to see event details:</p>
+  <div class="scroll-events" id="scrollEvents"></div>
+</div>
+
+<div class="debug-section">
+  <h3>Environment Variables & Flags</h3>
+  <div class="debug-row">
+    <span class="debug-label">Chrome Runtime:</span>
+    <span class="debug-value" id="chromeRuntime"></span>
+  </div>
+  <div class="debug-row">
+    <span class="debug-label">WebKit Version:</span>
+    <span class="debug-value" id="webkitVersion"></span>
+  </div>
+</div>
+
+<!-- Add lots of content for scrolling -->
+<div style="height: 2000px; background: linear-gradient(to bottom, #e3f2fd, #fff); margin-top: 20px; padding: 20px;">
+  <h3>Scroll Test Area</h3>
+  <p>This is a tall area for testing scroll behavior. Use your trackpad or mouse wheel to scroll and watch the events above.</p>
+  <div style="height: 200px; background: #f5f5f5; margin: 20px 0; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+    Visual Scroll Reference Box
+  </div>
+  <p>More content here to enable scrolling...</p>
+  <div style="height: 200px; background: #e8f5e8; margin: 20px 0; display: flex; align-items: center; justify-content: center; border: 2px dashed #4caf50;">
+    Another Visual Reference
+  </div>
+  <p>Keep scrolling to test momentum and smoothness...</p>
+  <div style="height: 200px; background: #fff3e0; margin: 20px 0; display: flex; align-items: center; justify-content: center; border: 2px dashed #ff9800;">
+    Final Reference Box
+  </div>
+  <p>End of scroll test area.</p>
+</div>
+
+<script>
+  // Populate basic info
+  document.getElementById('userAgent').textContent = navigator.userAgent;
+  document.getElementById('vendor').textContent = navigator.vendor || 'Unknown';
+  document.getElementById('appName').textContent = navigator.appName;
+  document.getElementById('appVersion').textContent = navigator.appVersion;
+  document.getElementById('platform').textContent = navigator.platform;
+
+  // Display info
+  document.getElementById('devicePixelRatio').textContent = window.devicePixelRatio;
+  document.getElementById('screenSize').textContent = `${screen.width} × ${screen.height}`;
+  document.getElementById('availableScreen').textContent = `${screen.availWidth} × ${screen.availHeight}`;
+  document.getElementById('windowSize').textContent = `${window.outerWidth} × ${window.outerHeight}`;
+  document.getElementById('viewportSize').textContent = `${window.innerWidth} × ${window.innerHeight}`;
+  document.getElementById('colorDepth').textContent = `${screen.colorDepth} bits`;
+
+  // Hardware info
+  document.getElementById('hardwareConcurrency').textContent = navigator.hardwareConcurrency || 'Unknown';
+
+  // Memory info (if available)
+  if (navigator.deviceMemory) {
+    document.getElementById('memory').textContent = `${navigator.deviceMemory} GB`;
+  } else if (performance.memory) {
+    document.getElementById('memory').textContent = `${Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)} MB (JS heap)`;
+  } else {
+    document.getElementById('memory').textContent = 'Unknown';
+  }
+
+  // WebGL info
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (gl) {
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        document.getElementById('webglVendor').textContent = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+        document.getElementById('webglRenderer').textContent = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      } else {
+        document.getElementById('webglVendor').textContent = 'WebGL available, vendor hidden';
+        document.getElementById('webglRenderer').textContent = 'WebGL available, renderer hidden';
+      }
+    } else {
+      document.getElementById('webglVendor').textContent = 'WebGL not available';
+      document.getElementById('webglRenderer').textContent = 'WebGL not available';
+    }
+  } catch (e) {
+    document.getElementById('webglVendor').textContent = 'Error: ' + e.message;
+    document.getElementById('webglRenderer').textContent = 'Error: ' + e.message;
+  }
+
+  // Feature detection
+  document.getElementById('smoothScroll').textContent = CSS.supports('scroll-behavior', 'smooth') ? 'Yes' : 'No';
+  document.getElementById('touchSupport').textContent = 'ontouchstart' in window ? 'Yes' : 'No';
+  document.getElementById('pointerEvents').textContent = 'onpointerdown' in window ? 'Yes' : 'No';
+  document.getElementById('wheelSupport').textContent = 'onwheel' in window ? 'Yes' : 'No';
+
+  // CSS feature detection
+  document.getElementById('transform3d').textContent = CSS.supports('transform', 'translate3d(0,0,0)') ? 'Yes' : 'No';
+  document.getElementById('scrollBehavior').textContent = CSS.supports('scroll-behavior', 'smooth') ? 'Yes' : 'No';
+  document.getElementById('overflowScrolling').textContent = CSS.supports('-webkit-overflow-scrolling', 'touch') ? 'Yes' : 'No';
+
+  // Try to detect CEF/Chrome version
+  const userAgent = navigator.userAgent;
+  const chromeMatch = userAgent.match(/Chrome\/(\d+\.\d+\.\d+\.\d+)/);
+  const webkitMatch = userAgent.match(/WebKit\/(\d+\.\d+)/);
+
+  document.getElementById('chromeRuntime').textContent = chromeMatch ? chromeMatch[1] : 'Not detected';
+  document.getElementById('webkitVersion').textContent = webkitMatch ? webkitMatch[1] : 'Not detected';
+
+  // Event tracking
+  let scrollEventCount = 0;
+  let wheelEventCount = 0;
+  const scrollEventsDiv = document.getElementById('scrollEvents');
+
+  function addScrollEvent(type, data) {
+    const eventDiv = document.createElement('div');
+    eventDiv.textContent = `${new Date().toLocaleTimeString()}: ${type} - ${data}`;
+    scrollEventsDiv.appendChild(eventDiv);
+    scrollEventsDiv.scrollTop = scrollEventsDiv.scrollHeight;
+  }
+
+  // Scroll event listener
+  window.addEventListener('scroll', function(e) {
+    scrollEventCount++;
+    document.getElementById('scrollCount').textContent = scrollEventCount;
+    addScrollEvent('scroll', `Y: ${window.pageYOffset}, X: ${window.pageXOffset}`);
+  });
+
+  // Wheel event listener
+  window.addEventListener('wheel', function(e) {
+    wheelEventCount++;
+    document.getElementById('wheelCount').textContent = wheelEventCount;
+    addScrollEvent('wheel', `deltaY: ${e.deltaY}, deltaX: ${e.deltaX}, deltaMode: ${e.deltaMode}`);
+  });
+
+  // Mouse tracking
+  document.addEventListener('mousemove', function(e) {
+    document.getElementById('mousePos').textContent = `${e.clientX}, ${e.clientY}`;
+  });
+
+  // Console output for debugging
+  console.log('=== CEF DEBUG INFO ===');
+  console.log('User Agent:', navigator.userAgent);
+  console.log('Device Pixel Ratio:', window.devicePixelRatio);
+  console.log('Screen:', screen.width, 'x', screen.height);
+  console.log('Window:', window.innerWidth, 'x', window.innerHeight);
+  console.log('Available features:', {
+    webgl: !!document.createElement('canvas').getContext('webgl'),
+    touch: 'ontouchstart' in window,
+    pointer: 'onpointerdown' in window,
+    smoothScroll: CSS.supports('scroll-behavior', 'smooth')
+  });
+</script>
+</body>
+</html>
